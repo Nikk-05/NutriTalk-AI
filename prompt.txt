@@ -1,0 +1,31 @@
+## Stitch Instructions
+
+Get the images and code for the following Stitch project's screens:
+
+## Project
+Title: Diet Plan Generator
+ID: 4782431046531170991
+
+## Screens:
+1. Design System
+    ID: asset-stub-assets-555ab7857cfa4f78ac1e26f2ef278eef-1774882486620
+
+2. Mobile View
+    ID: 8d7f87c2b29e429aab045cb4b54ea70a
+
+3. AI Chat Interface
+    ID: 94bf61d8494d4f56918c0f0d6b051ab4
+
+4. Upgrade Plan
+    ID: a43e257e1cba4a21a389405f30b52e87
+
+5. Landing Page
+    ID: a6011d3ce79a47fb800a048beeeb37b9
+
+6. Diet Plan Generator
+    ID: ab8c2e2e3dd1431eb140cd2ee6fd22db
+
+7. Dashboard
+    ID: d6538f93f4394ac5a04b1cad3a8ab181
+
+Use a utility like `curl -L` to download the hosted URLs.

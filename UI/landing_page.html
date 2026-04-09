@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NutriTalk AI - Your AI Nutritionist, Anytime</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&amp;family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-lowest": "#ffffff",
+              "surface-container-low": "#f2f4f4",
+              "surface-dim": "#d8dada",
+              "primary-fixed": "#79f7e3",
+              "primary-fixed-dim": "#59dbc7",
+              "outline-variant": "#bbcac5",
+              "secondary-fixed": "#ffdcbc",
+              "outline": "#6c7a76",
+              "on-surface": "#191c1d",
+              "tertiary": "#006a62",
+              "background": "#f8fafa",
+              "surface-variant": "#e1e3e3",
+              "surface-container": "#eceeee",
+              "inverse-on-surface": "#eff1f1",
+              "on-surface-variant": "#3c4946",
+              "primary-container": "#00a896",
+              "on-primary-fixed-variant": "#005047",
+              "surface-tint": "#006b5f",
+              "surface-container-high": "#e6e8e9",
+              "on-secondary-fixed-variant": "#683d00",
+              "secondary-fixed-dim": "#ffb86b",
+              "on-primary-fixed": "#00201c",
+              "surface-bright": "#f8fafa",
+              "tertiary-fixed": "#70f8e8",
+              "on-secondary-container": "#663b00",
+              "on-secondary-fixed": "#2c1700",
+              "on-secondary": "#ffffff",
+              "secondary": "#895100",
+              "secondary-container": "#fd9d1a",
+              "primary": "#006b5f",
+              "on-tertiary-fixed-variant": "#005049",
+              "error": "#ba1a1a",
+              "error-container": "#ffdad6",
+              "inverse-primary": "#59dbc7",
+              "surface-container-highest": "#e1e3e3",
+              "on-error-container": "#93000a",
+              "on-background": "#191c1d",
+              "on-error": "#ffffff",
+              "tertiary-fixed-dim": "#4fdbcc",
+              "on-primary-container": "#00352e",
+              "on-tertiary-fixed": "#00201d",
+              "tertiary-container": "#00a89b",
+              "surface": "#f8fafa",
+              "on-primary": "#ffffff",
+              "inverse-surface": "#2e3131",
+              "on-tertiary": "#ffffff",
+              "on-tertiary-container": "#003530"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .primary-gradient {
+            background: linear-gradient(135deg, #006b5f 0%, #00a896 100%);
+        }
+        .floating-blob {
+            filter: blur(60px);
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body overflow-x-hidden">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full flex justify-between items-center px-6 py-4 max-w-7xl mx-auto bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-none shadow-sm shadow-teal-900/5 z-50 left-1/2 -translate-x-1/2">
+<div class="text-2xl font-black text-teal-700 dark:text-teal-300 font-headline tracking-tight">NutriTalk AI</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-teal-700 dark:text-teal-300 border-b-2 border-teal-500 pb-1 font-headline font-bold" href="#">Dashboard</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-teal-600 transition-colors font-headline font-bold" href="#">AI Chat</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-teal-600 transition-colors font-headline font-bold" href="#">Diet Plan</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-full transition-all duration-300 active:scale-95">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-full transition-all duration-300 active:scale-95">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="account_circle">account_circle</span>
+</button>
+<button class="primary-gradient text-on-primary px-6 py-2 rounded-full font-headline font-bold shadow-[0px_10px_20px_rgba(0,107,95,0.2)] transition-all duration-300 active:scale-95 hidden lg:block">Get Started</button>
+</div>
+</nav>
+<!-- Hero Section -->
+<main class="relative pt-32 pb-20 px-6 overflow-hidden">
+<!-- Background Decorations -->
+<div class="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-fixed-dim/20 rounded-full floating-blob -mr-40 -mt-20"></div>
+<div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary-fixed/20 rounded-full floating-blob -ml-20 mb-20"></div>
+<div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 relative">
+<div class="flex-1 text-left">
+<div class="inline-flex items-center gap-2 px-4 py-1.5 bg-surface-container-high rounded-full mb-8">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-[0.75rem] font-label uppercase tracking-widest font-bold text-primary">New: GPT-4o Powered Nutrition</span>
+</div>
+<h1 class="text-[3.5rem] md:text-[4.5rem] leading-[1.1] font-headline font-black tracking-tight text-on-surface mb-8">
+                    Your AI <span class="text-primary">Nutritionist</span>, Anytime
+                </h1>
+<p class="text-lg text-on-surface-variant max-w-xl mb-10 leading-relaxed">
+                    Stop guessing your diet. NutriTalk uses advanced curation AI to build real-time meal plans, track metrics, and answer your health questions instantly.
+                </p>
+<div class="flex flex-wrap gap-4">
+<button class="primary-gradient text-on-primary px-8 py-4 rounded-full font-headline font-bold text-lg shadow-[0px_20px_40px_rgba(0,107,95,0.15)] transition-all hover:-translate-y-1">Start Your Plan</button>
+<button class="bg-surface-container-highest text-primary px-8 py-4 rounded-full font-headline font-bold text-lg transition-all hover:bg-surface-container-high">Chat with AI</button>
+</div>
+<div class="mt-12 flex items-center gap-6">
+<div class="flex -space-x-3">
+<img class="w-10 h-10 rounded-full border-2 border-white object-cover" data-alt="portrait of a smiling woman athlete with soft natural lighting and blurred park background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnUSRFNhKlBrws8L8Ob1CZPle7vpljORRIpVxIG-uVLpQ126WpX79HWBV5Q1ivjAtSGl2gWPRnSpLaRkTPDesrl3HsFSqB2PClIf0zgbYqQPYoBhgtXb5YkuRGhXVDuddbQDxTSxiiR0UaPnn0pNuOgcDgXWs-h3lAw6Fjs8tbJ6XVm_V8HWSPeoT0ik093UJR8oo8lIL1YwViY78BukIeYuw2XVJTPQmUbA2vQyg7mpq4J2ZJ4s4iWl4Kj8eP7ciRtHAbfz-lI94"/>
+<img class="w-10 h-10 rounded-full border-2 border-white object-cover" data-alt="professional portrait of a man in fitness attire with clean white background and sharp lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgolJHdJ15R59c13A6qamw3L6UUBQBah8A_ceH0bSidJKRy417khUgcalHpR--dsPbNTQp6A2hbMSmXFzPEjw_t6AipjQd7dx352J51fqQlkj9WLFALqaGelj6vAoJ3Q_e7tIeDmJK4fr4cQ9vWweK4inqF61RkZ5q7MxNJaRFeSm6xqL08YH6IPe-iNBoJ-wcffQXqGCVntNVT28_X6v1XR9I3pZV6Gm1Js1o1m06ls2ZxR0wZHr2UiaTK6vPsEylX15bHtv5VNo"/>
+<img class="w-10 h-10 rounded-full border-2 border-white object-cover" data-alt="cheerful woman with athletic build in sunlit gym setting wearing yoga apparel" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-HUDPWVCQzlrbbN3vGY9sULPUK-2Tlrl9JgLKfrzvcWkHSUiupGao6D3kbd-rJiOkC7-cT-LpctY0G46Kpye9S7_QWqQkEpSH8wA7qrmT-c5IdG3OSC3JyQXRYbYGRuMt_UqhtMPC6gL9bhTe1H-foug8fVcA0Q5JYQuyq_WqJdtvZ80_OhodEOMGK5eYyd0whE4qG-hY1Ntr-AAmhputVAU6BpdLlOfT3sc4TDBJ9qRTwSw_Tlei387IGOk4k-_8o9PV_rKH4Oc"/>
+</div>
+<p class="text-sm font-label font-bold text-on-surface-variant uppercase tracking-wider">Join 12k+ Active Users</p>
+</div>
+</div>
+<div class="flex-1 relative">
+<div class="relative w-full aspect-square max-w-lg mx-auto">
+<!-- Glassmorphism Card 1: AI Chat -->
+<div class="absolute top-10 -left-6 z-20 glass-card p-5 rounded-lg shadow-[0px_20px_40px_rgba(25,28,29,0.06)] w-64 border border-white/20">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded-full primary-gradient flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<p class="font-headline font-bold text-sm">AI Nutritionist</p>
+</div>
+<p class="text-xs leading-relaxed text-on-surface-variant bg-surface-container-low/50 p-3 rounded-lg">"Based on your 5k run, I recommend a high-protein breakfast with complex carbs..."</p>
+</div>
+<!-- Glassmorphism Card 2: Stats -->
+<div class="absolute bottom-10 -right-6 z-20 glass-card p-6 rounded-lg shadow-[0px_20px_40px_rgba(25,28,29,0.06)] w-56 border border-white/20">
+<p class="font-label text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Daily Progress</p>
+<div class="flex justify-between items-end gap-2">
+<div class="w-3 h-12 bg-primary-fixed rounded-full"></div>
+<div class="w-3 h-16 bg-primary-fixed rounded-full"></div>
+<div class="w-3 h-24 primary-gradient rounded-full"></div>
+<div class="w-3 h-14 bg-primary-fixed rounded-full"></div>
+<div class="w-3 h-20 bg-primary-fixed rounded-full"></div>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<span class="font-headline font-bold text-xl">84%</span>
+<span class="text-[10px] font-label font-bold text-secondary">+12% vs last week</span>
+</div>
+</div>
+<!-- Main Visual Element -->
+<div class="w-full h-full rounded-[3rem] overflow-hidden shadow-2xl relative">
+<img class="w-full h-full object-cover" data-alt="vibrant healthy Buddha bowl with avocado, chickpeas, and fresh greens on a white table with bright morning light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVGJ6blpJu2YGwCgxdbyLFSX8qfzbbfdbVYUg9hVQJAEnTslUH_wZ-G8QzPtYnSj5JE8yasGcEJXs0_3P_XtU0haMDDu4oWq9AFCApcxn_e5b_E-XDJrhxd0-gF3DaJWSmIYPheIRCfIrKwH7J-K6W0yxWlNrUhdi4kfxB68ia_rMddEHNn5WBfxOUy5LI1w-TDIGmfurC966AuFm5iqGcV6Iu6odf6zKWn1P53CdFnzm7Qa6ZcmVHsegCDJKsXTymndah1Ym8qYs"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/40 to-transparent"></div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bento Grid Features Section -->
+<section class="py-24 px-6 bg-surface-container-low">
+<div class="max-w-7xl mx-auto">
+<div class="mb-16">
+<h2 class="text-[1.75rem] font-headline font-bold text-on-surface mb-4">Precision Intelligence</h2>
+<div class="w-20 h-1.5 primary-gradient rounded-full"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Large Featured Bento -->
+<div class="md:col-span-2 bg-surface-container-lowest rounded-lg p-10 flex flex-col justify-between group transition-all duration-500 hover:shadow-xl relative overflow-hidden">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary-fixed-dim/10 rounded-full -mr-20 -mt-20 group-hover:scale-110 transition-transform"></div>
+<div>
+<span class="material-symbols-outlined text-primary text-4xl mb-6" data-icon="restaurant_menu">restaurant_menu</span>
+<h3 class="text-3xl font-headline font-bold text-on-surface mb-4">AI Diet Planner</h3>
+<p class="text-on-surface-variant max-w-md text-lg">Hyper-personalized meal sequences that adapt to your pantry, allergies, and metabolic goals in real-time.</p>
+</div>
+<div class="mt-12 flex items-center gap-4 text-primary font-headline font-bold cursor-pointer group/link">
+<span>Explore Planning</span>
+<span class="material-symbols-outlined group-hover/link:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+<!-- Small Bento 1 -->
+<div class="bg-surface-container-lowest rounded-lg p-10 group transition-all duration-500 hover:shadow-xl">
+<span class="material-symbols-outlined text-secondary text-4xl mb-6" data-icon="monitoring">monitoring</span>
+<h3 class="text-2xl font-headline font-bold text-on-surface mb-4">Calorie Tracker</h3>
+<p class="text-on-surface-variant">Log meals via photo or text. Our vision AI breaks down macros in seconds.</p>
+</div>
+<!-- Small Bento 2 -->
+<div class="bg-primary text-on-primary rounded-lg p-10 group transition-all duration-500 hover:shadow-xl shadow-[0px_20px_40px_rgba(0,107,95,0.15)]">
+<span class="material-symbols-outlined text-primary-fixed text-4xl mb-6" data-icon="psychology">psychology</span>
+<h3 class="text-2xl font-headline font-bold mb-4">Smart Insights</h3>
+<p class="text-on-primary-container text-white/80">Connect your wearable data for biological correlations between food and energy.</p>
+</div>
+<!-- Wide Bento Bottom -->
+<div class="md:col-span-2 bg-surface-container-lowest rounded-lg p-10 flex flex-col md:flex-row gap-8 items-center group transition-all duration-500 hover:shadow-xl">
+<div class="flex-1">
+<h3 class="text-2xl font-headline font-bold text-on-surface mb-4">Global Recipe Database</h3>
+<p class="text-on-surface-variant mb-6">Access over 50,000+ nutritionally validated recipes from world-renowned chefs and dietitians.</p>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-surface-container-high rounded-full text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">Keto</span>
+<span class="px-3 py-1 bg-surface-container-high rounded-full text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">Vegan</span>
+<span class="px-3 py-1 bg-surface-container-high rounded-full text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">Paleo</span>
+</div>
+</div>
+<div class="w-full md:w-64 aspect-video rounded-2xl overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="professional flat lay of meal prep containers with grilled salmon, roasted sweet potatoes, and steamed asparagus on a marble surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1Au8Y0gNURmKi-WbdTKjzR5GCmdj6WsOw5iYUgal8ca9SzTfWVsFgIIDFm4pPOUC8OuYkGzsrCHTR-lrzmwAjx0a-a_lQ4FTznPX6M8TEDMl4ZNMYRO0YoDQnASkF4TLFkrsi-B0xkcd1xAUHAjuFXZvW51hlBu3CaGSLHHspEJgGxlpSPpM14yLzhLY-6K-AN2z1GZGOOQmutO1RpY1cYa6Hf_dNTboPJrk0qXIQWTr-0bkISfXPKRXq3qqLsvpt3wgF14H5-o4"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Testimonials Section -->
+<section class="py-24 px-6 overflow-hidden">
+<div class="max-w-7xl mx-auto">
+<h2 class="text-[1.75rem] font-headline font-bold text-on-surface mb-16 text-center">Loved by Wellness Seekers</h2>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Testimonial 1 -->
+<div class="glass-card p-8 rounded-lg shadow-[0px_20px_40px_rgba(25,28,29,0.04)] border border-outline-variant/15">
+<div class="flex gap-1 text-secondary mb-6">
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<p class="text-on-surface mb-8 italic">"The AI diet planner felt like it actually knew my cravings but kept me on track. I lost 15lbs in 2 months without feeling restricted."</p>
+<div class="flex items-center gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="close-up portrait of a woman with natural appearance and soft daylight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVgUbtLdqlSoIz3zPNvzNE7Wlm3WbEGWlhjdaIoKHWtaqp_AW8L7gESWZ6ALIiN-CrucSkq8d05KRy9bCfHo7Jo2g_LsaYmF5g3Je9NIRRfTF1BgPjHrX09y-SfQPGB3BrNPPiYCILdnpQ4LZHAUOK4pwc98cp6W_6MHpivqjnwKmuz0LcMKB22IW44TsSEJdnhiHQt1rylaj_TC5bjTqnW3VTY_wHw1K9QDoTn7pJM9EQu5fA17VJzZTC3NuRbwTLvM11XxHZM-E"/>
+<div>
+<p class="font-headline font-bold">Sarah Jenkins</p>
+<p class="text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-widest">Yoga Instructor</p>
+</div>
+</div>
+</div>
+<!-- Testimonial 2 -->
+<div class="glass-card p-8 rounded-lg shadow-[0px_20px_40px_rgba(25,28,29,0.04)] border border-outline-variant/15 lg:-translate-y-8">
+<div class="flex gap-1 text-secondary mb-6">
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<p class="text-on-surface mb-8 italic">"The smart insights connected to my Oura ring were a game changer. Now I know exactly which foods help me sleep better."</p>
+<div class="flex items-center gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="headshot of a man with a friendly smile wearing a casual shirt in an outdoor setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBn4jwf348TLRDyJcA8fTaONYMy930rFpaGi5d7VtZoJNNS4AYMQzRBIAP70XnpE5jC4m6qofkGiTBODbLcOIGefoVTHs1Sn7YqY0WqyeVWGOp-7LhjRTXFx--n94gmeCoY37zf919MyfBWxxEBLt7i2PzP_JuzNGP3VyahV6FMhoKxhx4kWJGNydRzX8xXJbpn4W4uPoJbIjihrk_ovGu_1VImXCC_ki7uJxc9344IXoYQ_5pnOxCcstxFqSrwr4uNIKUFzmK2f8U"/>
+<div>
+<p class="font-headline font-bold">David Chen</p>
+<p class="text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-widest">Software Engineer</p>
+</div>
+</div>
+</div>
+<!-- Testimonial 3 -->
+<div class="glass-card p-8 rounded-lg shadow-[0px_20px_40px_rgba(25,28,29,0.04)] border border-outline-variant/15">
+<div class="flex gap-1 text-secondary mb-6">
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<p class="text-on-surface mb-8 italic">"I love the editorial feel. It doesn't look like a boring spreadsheet. NutriTalk makes health feel like a lifestyle, not a chore."</p>
+<div class="flex items-center gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="professional portrait of a woman with a confident smile in a modern office environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCcM6dmBz8Rz3n1g0jDKk3J-TCH_mVWMlHPIDDwKyL1dahcCG-XQ35AXAtKWYmJteQyNTIOrXX820J0mUSurVJqy0KXoA9j7TorbvDEWsGBl501eY0qo1_0apptrJzKFIHg656XdSMg0Y9Vpcdj5XMmHRGD7prGgCl4Xe82VWK73Aofbc0ogUGVEVNfHzr9YF1n1-mNWIYtuzY7PZpJ5Z66kZchcmGfOkkrN88spOCytm6JcZvvY2vpOlsCIOUF1NYLHoDsO_-2Bj0"/>
+<div>
+<p class="font-headline font-bold">Marcus Thorne</p>
+<p class="text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-widest">Creative Director</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 w-full py-12">
+<div class="w-full max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex flex-col items-center md:items-start">
+<span class="font-space-grotesk font-bold text-teal-800 dark:text-teal-200 text-xl">NutriTalk AI</span>
+<p class="font-manrope text-sm text-slate-500 mt-2 text-center md:text-left">© 2024 NutriTalk AI. Your Digital Health Curator.</p>
+</div>
+<div class="flex gap-8">
+<a class="text-slate-500 hover:text-teal-500 transition-colors font-manrope text-sm underline decoration-teal-500/30 underline-offset-4" href="#">Privacy</a>
+<a class="text-slate-500 hover:text-teal-500 transition-colors font-manrope text-sm underline decoration-teal-500/30 underline-offset-4" href="#">Terms</a>
+<a class="text-slate-500 hover:text-teal-500 transition-colors font-manrope text-sm underline decoration-teal-500/30 underline-offset-4" href="#">Support</a>
+<a class="text-slate-500 hover:text-teal-500 transition-colors font-manrope text-sm underline decoration-teal-500/30 underline-offset-4" href="#">Twitter</a>
+</div>
+</div>
+</footer>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border-t border-slate-200/20 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] rounded-t-[2.5rem]">
+<button class="flex flex-col items-center justify-center bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-2xl px-5 py-2 scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="font-manrope text-[10px] font-bold uppercase tracking-widest mt-1">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2 hover:text-teal-500">
+<span class="material-symbols-outlined" data-icon="forum">forum</span>
+<span class="font-manrope text-[10px] font-bold uppercase tracking-widest mt-1">Chat</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2 hover:text-teal-500">
+<span class="material-symbols-outlined" data-icon="Description">description</span>
+<span class="font-manrope text-[10px] font-bold uppercase tracking-widest mt-1">Plan</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2 hover:text-teal-500">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-manrope text-[10px] font-bold uppercase tracking-widest mt-1">Profile</span>
+</button>
+</nav>
+</body></html>

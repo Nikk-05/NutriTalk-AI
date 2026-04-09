@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Upgrade Plan - NutriTalk AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-fixed-dim": "#4fdbcc",
+              "surface-dim": "#d8dada",
+              "on-secondary-fixed-variant": "#683d00",
+              "tertiary": "#006a62",
+              "on-primary-fixed-variant": "#005047",
+              "primary-container": "#00a896",
+              "outline-variant": "#bbcac5",
+              "surface-bright": "#f8fafa",
+              "secondary-fixed-dim": "#ffb86b",
+              "on-primary-fixed": "#00201c",
+              "on-primary": "#ffffff",
+              "surface-container-highest": "#e1e3e3",
+              "primary-fixed": "#79f7e3",
+              "surface-tint": "#006b5f",
+              "surface-container-low": "#f2f4f4",
+              "surface-container": "#eceeee",
+              "on-tertiary-fixed-variant": "#005049",
+              "secondary-container": "#fd9d1a",
+              "background": "#f8fafa",
+              "on-surface": "#191c1d",
+              "on-secondary-fixed": "#2c1700",
+              "secondary-fixed": "#ffdcbc",
+              "outline": "#6c7a76",
+              "on-error": "#ffffff",
+              "on-background": "#191c1d",
+              "surface": "#f8fafa",
+              "on-tertiary": "#ffffff",
+              "on-secondary": "#ffffff",
+              "on-error-container": "#93000a",
+              "surface-container-lowest": "#ffffff",
+              "on-tertiary-fixed": "#00201d",
+              "inverse-surface": "#2e3131",
+              "inverse-on-surface": "#eff1f1",
+              "primary-fixed-dim": "#59dbc7",
+              "secondary": "#895100",
+              "on-tertiary-container": "#003530",
+              "on-primary-container": "#00352e",
+              "error-container": "#ffdad6",
+              "tertiary-fixed": "#70f8e8",
+              "surface-variant": "#e1e3e3",
+              "tertiary-container": "#00a89b",
+              "primary": "#006b5f",
+              "on-surface-variant": "#3c4946",
+              "inverse-primary": "#59dbc7",
+              "error": "#ba1a1a",
+              "surface-container-high": "#e6e8e9",
+              "on-secondary-container": "#663b00"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+      .primary-gradient {
+        background: linear-gradient(135deg, #006b5f 0%, #00a896 100%);
+      }
+      .ghost-border {
+        border: 1px solid rgba(187, 202, 197, 0.15);
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full flex justify-between items-center px-6 py-4 max-w-7xl mx-auto bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-none shadow-sm shadow-teal-900/5 z-50 left-1/2 -translate-x-1/2">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-teal-600 dark:text-teal-400 p-2 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-full transition-all duration-300 active:scale-95">arrow_back</button>
+<span class="text-2xl font-black text-teal-700 dark:text-teal-300 font-headline tracking-tight">NutriTalk AI</span>
+</div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="text-teal-700 dark:text-teal-300 border-b-2 border-teal-500 pb-1 font-headline font-bold" href="#">Plan</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-teal-600 transition-colors font-headline" href="#">Home</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-teal-600 transition-colors font-headline" href="#">Chat</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-teal-600 transition-colors font-headline" href="#">Profile</a>
+</div>
+<button class="material-symbols-outlined text-teal-600 dark:text-teal-400 p-2 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-full transition-all duration-300 active:scale-95">account_circle</button>
+</header>
+<main class="pt-32 pb-24 px-6 max-w-7xl mx-auto">
+<!-- Hero Section -->
+<section class="mb-20 text-center">
+<h1 class="font-headline font-bold text-5xl md:text-7xl text-on-surface tracking-tight mb-6">Elevate Your Wellness</h1>
+<p class="text-on-surface-variant text-xl md:text-2xl max-w-2xl mx-auto">Unlock the full power of NutriTalk AI with personalized insights and premium support.</p>
+</section>
+<!-- Pricing Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
+<!-- Monthly Plan -->
+<div class="bg-surface-container-lowest rounded-lg p-8 ghost-border shadow-[0px_20px_40px_rgba(25,28,29,0.06)] flex flex-col relative overflow-hidden">
+<div class="mb-8">
+<span class="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">Standard Journey</span>
+<h3 class="font-headline font-bold text-3xl mt-2">Monthly</h3>
+<div class="mt-4 flex items-baseline gap-1">
+<span class="text-4xl font-black font-headline text-primary">$14.99</span>
+<span class="text-on-surface-variant font-medium">/mo</span>
+</div>
+</div>
+<ul class="space-y-4 mb-10 flex-grow">
+<li class="flex items-center gap-3 text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span>Basic AI Chat</span>
+</li>
+<li class="flex items-center gap-3 text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span>Standard Diet Plans</span>
+</li>
+</ul>
+<button class="w-full py-4 rounded-full bg-surface-container-highest text-primary font-bold font-headline transition-all hover:bg-primary-container hover:text-white active:scale-95">Upgrade Now</button>
+</div>
+<!-- Yearly Plan (Highlighted) -->
+<div class="relative group">
+<div class="absolute -top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
+<span class="bg-secondary-container text-on-secondary-container px-6 py-1.5 rounded-full text-xs font-bold font-headline uppercase tracking-widest shadow-lg">Early Offer</span>
+<span class="bg-primary text-white px-4 py-1 rounded-full text-[10px] font-bold font-headline uppercase">Best Value</span>
+</div>
+<div class="h-full primary-gradient rounded-lg p-8 shadow-[0px_30px_60px_rgba(0,107,95,0.15)] flex flex-col relative overflow-hidden transform md:scale-105">
+<div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+<div class="mb-8 relative">
+<span class="font-label text-xs font-bold uppercase tracking-widest text-primary-fixed">Elite Performance</span>
+<h3 class="font-headline font-bold text-3xl mt-2 text-white">Yearly</h3>
+<div class="mt-4 flex flex-col">
+<div class="flex items-baseline gap-1">
+<span class="text-5xl font-black font-headline text-white">$99.99</span>
+<span class="text-primary-fixed font-medium">/yr</span>
+</div>
+<span class="text-primary-fixed-dim text-sm font-bold mt-1">Save 45% ($8.33/mo)</span>
+</div>
+</div>
+<ul class="space-y-4 mb-10 flex-grow relative">
+<li class="flex items-center gap-3 text-white">
+<span class="material-symbols-outlined text-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-medium">All Features Included</span>
+</li>
+<li class="flex items-center gap-3 text-white">
+<span class="material-symbols-outlined text-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-medium">Personalized Coaching</span>
+</li>
+<li class="flex items-center gap-3 text-white">
+<span class="material-symbols-outlined text-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-medium">Early Access to Beta</span>
+</li>
+</ul>
+<button class="w-full py-5 rounded-full bg-white text-primary font-black font-headline text-lg shadow-xl shadow-teal-900/20 transition-all hover:scale-[1.02] active:scale-95 relative overflow-hidden">
+                        Upgrade Now
+                    </button>
+</div>
+</div>
+<!-- Quarterly Plan -->
+<div class="bg-surface-container-lowest rounded-lg p-8 ghost-border shadow-[0px_20px_40px_rgba(25,28,29,0.06)] flex flex-col relative overflow-hidden">
+<div class="mb-8">
+<span class="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">Strategic Balance</span>
+<h3 class="font-headline font-bold text-3xl mt-2">Quarterly</h3>
+<div class="mt-4 flex flex-col">
+<div class="flex items-baseline gap-1">
+<span class="text-4xl font-black font-headline text-primary">$34.99</span>
+<span class="text-on-surface-variant font-medium">/3mos</span>
+</div>
+<span class="text-secondary font-bold text-sm mt-1">Save 22%</span>
+</div>
+</div>
+<ul class="space-y-4 mb-10 flex-grow">
+<li class="flex items-center gap-3 text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span>Advanced AI Coaching</span>
+</li>
+<li class="flex items-center gap-3 text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span>Priority Support</span>
+</li>
+<li class="flex items-center gap-3 text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span>Macro Analysis</span>
+</li>
+</ul>
+<button class="w-full py-4 rounded-full bg-surface-container-highest text-primary font-bold font-headline transition-all hover:bg-primary-container hover:text-white active:scale-95">Upgrade Now</button>
+</div>
+</div>
+<!-- Comparison Table Section -->
+<section class="mt-32">
+<h2 class="font-headline font-bold text-4xl mb-12 text-center">Feature Breakdown</h2>
+<div class="overflow-hidden rounded-lg bg-surface-container-low p-1">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-slate-200/50">
+<th class="py-6 px-8 font-headline font-bold text-xl text-on-surface">Feature</th>
+<th class="py-6 px-8 font-headline font-bold text-center text-on-surface-variant">Monthly</th>
+<th class="py-6 px-8 font-headline font-bold text-center text-on-surface-variant">Quarterly</th>
+<th class="py-6 px-8 font-headline font-bold text-center text-primary">Yearly</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200/30">
+<tr>
+<td class="py-6 px-8 font-medium">AI Chat Interface</td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr>
+<td class="py-6 px-8 font-medium">Daily Meal Plans</td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr>
+<td class="py-6 px-8 font-medium">Macro &amp; Micronutrient Analysis</td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-on-surface-variant/20">remove</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr>
+<td class="py-6 px-8 font-medium">Priority 24/7 Support</td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-on-surface-variant/20">remove</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr>
+<td class="py-6 px-8 font-medium">1-on-1 Personalized Coaching</td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-on-surface-variant/20">remove</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-on-surface-variant/20">remove</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr>
+<td class="py-6 px-8 font-medium">Beta Feature Access</td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-on-surface-variant/20">remove</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-on-surface-variant/20">remove</span></td>
+<td class="py-6 px-8 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Aesthetic Bento-ish Showcase -->
+<section class="mt-32 grid grid-cols-1 md:grid-cols-2 gap-6 h-[400px]">
+<div class="relative rounded-lg overflow-hidden group">
+<img alt="Healthy food bowl" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="close-up of vibrant Mediterranean Buddha bowl with fresh kale, avocado, chickpeas and tahini dressing under bright soft daylight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCQTGdzspzvygKZmMDZOT3Gau1urNFyJaKmEYmL2ZM-N-aDKn7krIphyXDejVzu8enjZ8sYoYdW6IBNJKcjUi_hq9ERNILwsJNW-uUkssyhEeQzEvKTDbn_H0l31sPwYTV4v1qQl2eSS9raubLkri0ugcQpa7fo2QZfIIxIXuPVcGLf31CzQovadb570ePFmrxjk8_xzOBrJX5PayCI_YrAAuhVFovtDo1NFVMRZH28qtIqjGtfN3bli7tA1hihGPx9CUhzJLJn3I"/>
+<div class="absolute inset-0 bg-black/40 flex items-end p-8">
+<p class="text-white font-headline font-bold text-2xl">Fuel Your Ambition</p>
+</div>
+</div>
+<div class="grid grid-rows-2 gap-6">
+<div class="bg-primary-container/20 rounded-lg p-8 flex items-center gap-6 relative overflow-hidden">
+<div class="material-symbols-outlined text-primary text-5xl opacity-30 absolute -right-4 -top-4 scale-150">bolt</div>
+<div>
+<h4 class="font-headline font-bold text-xl text-primary mb-2">Instant AI Evolution</h4>
+<p class="text-on-surface-variant">Get smarter responses and faster diet generation with premium hardware allocation.</p>
+</div>
+</div>
+<div class="bg-secondary-container/20 rounded-lg p-8 flex items-center gap-6 relative overflow-hidden">
+<div class="material-symbols-outlined text-secondary text-5xl opacity-30 absolute -right-4 -bottom-4 scale-150">shield_with_heart</div>
+<div>
+<h4 class="font-headline font-bold text-xl text-secondary mb-2">Total Wellness Guard</h4>
+<p class="text-on-surface-variant">Advanced tracking features that monitor your long-term health trends.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-12 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800">
+<div class="w-full max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+<span class="font-space-grotesk font-bold text-teal-800 dark:text-teal-200">NutriTalk AI</span>
+<p class="font-manrope text-sm text-slate-500">© 2024 NutriTalk AI. Your Digital Health Curator.</p>
+<div class="flex gap-8">
+<a class="text-slate-500 hover:text-teal-500 transition-colors font-manrope text-sm underline decoration-teal-500/30 underline-offset-4" href="#">Privacy</a>
+<a class="text-slate-500 hover:text-teal-500 transition-colors font-manrope text-sm underline decoration-teal-500/30 underline-offset-4" href="#">Terms</a>
+<a class="text-slate-500 hover:text-teal-500 transition-colors font-manrope text-sm underline decoration-teal-500/30 underline-offset-4" href="#">Support</a>
+<a class="text-slate-500 hover:text-teal-500 transition-colors font-manrope text-sm underline decoration-teal-500/30 underline-offset-4" href="#">Twitter</a>
+</div>
+</div>
+</footer>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border-t border-slate-200/20 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] rounded-t-[2.5rem]">
+<div class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-manrope text-[10px] font-bold uppercase tracking-widest mt-1">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2">
+<span class="material-symbols-outlined">forum</span>
+<span class="font-manrope text-[10px] font-bold uppercase tracking-widest mt-1">Chat</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-2xl px-5 py-2 scale-110 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">description</span>
+<span class="font-manrope text-[10px] font-bold uppercase tracking-widest mt-1">Plan</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-5 py-2">
+<span class="material-symbols-outlined">person</span>
+<span class="font-manrope text-[10px] font-bold uppercase tracking-widest mt-1">Profile</span>
+</div>
+</nav>
+</body></html>

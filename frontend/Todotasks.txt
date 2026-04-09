@@ -1,0 +1,6 @@
+Maintain the global storage for user data.
+Redux, reducer, slicer, dispatch is used to do that.
+Login and Signup handling is done using the backend API calls.
+Create a standard API calling endpoint with attached headers and baseURL.
+Access token is stored in session storage so that till the session live token will be available.
+
