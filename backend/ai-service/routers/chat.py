@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from sse_starlette.sse import EventSourceResponse
 from models.schemas import ChatRequest
-from services.llm_service import chat_stream
+from services.chat_service import run_chat, stream_chat
 
 router = APIRouter(prefix="/chat", tags=["AI Chat"])
 
@@ -23,10 +23,12 @@ async def chat_stream_endpoint(request: ChatRequest):
     messages = [{"role": m.role, "content": m.content} for m in (request.history or [])]
     messages.append({"role": "user", "content": request.message})
 
+    print(messages)
+
     async def event_generator():
         full_text = ""
         try:
-            async for token in chat_stream(messages, request.user_context):
+            async for token in stream_chat(messages, request.user_context):
                 full_text += token
                 # Check if we have a complete <recipe> block to emit as structured card
                 if "<recipe>" in full_text and "</recipe>" in full_text:
@@ -65,8 +67,6 @@ async def chat_non_stream(request: ChatRequest):
     messages = [{"role": m.role, "content": m.content} for m in (request.history or [])]
     messages.append({"role": "user", "content": request.message})
 
-    full_response = ""
-    async for token in chat_stream(messages, request.user_context):
-        full_response += token
+    full_response = run_chat(messages, request.user_context)
 
     return {"data": {"message": full_response, "role": "ai"}}

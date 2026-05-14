@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import Button from '../components/Button'
-import { fetchAPI } from '../utils/apiCalls.js'
+import { fetchAPI, auth } from '../utils/apiCalls.js'
+import { setCredentials } from '../store/slices/authSlice'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
 
@@ -14,7 +17,11 @@ export default function LoginPage() {
       setLoading(true)
       const response = await fetchAPI("/auth/login","POST", form)
       if(response.status === 'success'){
-        sessionStorage.setItem('token', response.data.token)
+        // Persist token + user to sessionStorage (Axios interceptor reads from here)
+        auth.setToken(response.data.accessToken)
+        auth.setUser(response.data.user)
+        // Store user data in Redux so all components can access it reactively
+        dispatch(setCredentials({ user: response.data.user, token: response.data.accessToken }))
         setTimeout(() => { navigate('/dashboard') }, 1000)
       }
     }catch(error){

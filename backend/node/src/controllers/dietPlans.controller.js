@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { DietPlan } from '../models/DietPlan.model.js';
+import { MealLog } from '../models/MealLog.model.js';
 import { success, created, notFound, serverError } from '../utils/response.utils.js';
 
 const AI_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
@@ -28,6 +29,7 @@ const generatePlan = async (req, res, next) => {
     });
 
     const generated = aiResponse.data;
+    console.log(generated)
 
     // Save temp plan to DB (unsaved until user explicitly saves)
     const plan = await DietPlan.create({
@@ -38,8 +40,9 @@ const generatePlan = async (req, res, next) => {
       cuisinePreferences,
       totalDays: days,
       isSaved: false,
-      days: generated.days,
+      days: generated.data.days,
     });
+
 
     return created(res, { plan });
   } catch (err) {
@@ -81,4 +84,48 @@ const deletePlan = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-export default { getPlans, generatePlan, getPlan, savePlan, deletePlan };
+// ── POST /diet-plans/:id/seed-today ───────────────────────────
+// Finds today's day in the saved plan and creates MealLog entries
+// (logged: false = planned but not yet eaten) so the dashboard can
+// display the day's meals without the user manually logging each one.
+// Idempotent — skips any meal that is already in MealLog for today.
+const seedToday = async (req, res, next) => {
+  try {
+    const plan = await DietPlan.findOne({ _id: req.params.id, user: req.user._id });
+    if (!plan) return notFound(res, 'Plan not found.');
+
+    const today   = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }); // "Monday"
+
+    // Match today's day name against the plan's days array
+    const dayData = plan.days.find(d => d.day?.toLowerCase() === dayName.toLowerCase());
+    if (!dayData) return success(res, { message: `No meals planned for ${dayName}.`, seeded: 0 });
+
+    const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+    let seeded = 0;
+
+    for (const type of mealTypes) {
+      const meal = dayData.meals?.[type];
+      if (!meal?.name) continue;
+
+      // Skip if already seeded for today (idempotent check)
+      const exists = await MealLog.findOne({ user: req.user._id, date: today, type, name: meal.name });
+      if (exists) continue;
+
+      await MealLog.create({
+        user:     req.user._id,
+        date:     today,
+        type,
+        name:     meal.name,
+        calories: meal.calories || 0,
+        logged:   false, // planned, not yet eaten — user marks true when they eat it
+        macros:   { proteinG: 0, carbsG: 0, fatG: 0, fiberG: 0 },
+      });
+      seeded++;
+    }
+
+    return success(res, { message: `Seeded ${seeded} meal(s) for today (${dayName}).`, seeded, day: dayName });
+  } catch (err) { next(err); }
+};
+
+export default { getPlans, generatePlan, getPlan, savePlan, deletePlan, seedToday };

@@ -9,6 +9,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'))
 const ChatPage = lazy(() => import('./pages/ChatPage.jsx'))
 const DietPlanPage = lazy(() => import('./pages/DietPlanPage.jsx'))
 const UpgradePage = lazy(() => import('./pages/UpgradePage.jsx'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'))
 
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/diet-plan" element={<DietPlanPage />} />
             <Route path="/upgrade" element={<UpgradePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
           {/* Fallback */}

@@ -47,7 +47,7 @@ Rules:
 - Reflect {cuisines} cuisine preferences where possible
 """
 
-    raw = await generate_text(prompt)
+    raw = await generate_diet(prompt)
 
     # Extract JSON array from response
     match = re.search(r'\[.*\]', raw, re.DOTALL)

@@ -5,12 +5,18 @@ import { success, created, error, serverError } from '../utils/response.utils.js
 // ── POST /auth/signup ──────────────────────────────────────
 const signup = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, age, gender, metrics, preferences } = req.body;
 
     const existing = await User.findOne({ email });
     if (existing) return error(res, 'EMAIL_ALREADY_EXISTS', 'The email address is already in use.', 409, 'email');
 
-    const user = await User.create({ name, email, password });
+    const user = await User.create({
+      name, email, password,
+      ...(age !== undefined && { age }),
+      ...(gender !== undefined && { gender }),
+      ...(metrics && { metrics }),
+      ...(preferences && { preferences }),
+    });
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
@@ -56,7 +62,8 @@ const login = async (req, res, next) => {
 // ── POST /auth/logout ──────────────────────────────────────
 const logout = async (req, res, next) => {
   try {
-    const { refreshToken } = req.body;
+    // Read refresh token from the httpOnly cookie (not req.body)
+    const refreshToken = req.cookies?.refreshToken;
     if (refreshToken && req.user) {
       await User.findByIdAndUpdate(req.user._id, {
         $pull: { refreshTokens: refreshToken }
@@ -70,7 +77,8 @@ const logout = async (req, res, next) => {
 // ── POST /auth/refresh ─────────────────────────────────────
 const refresh = async (req, res, next) => {
   try {
-    const { refreshToken } = req.body;
+    // Read refresh token from the httpOnly cookie sent automatically by the browser
+    const refreshToken = req.cookies?.refreshToken;
     if (!refreshToken) return error(res, 'MISSING_REFRESH_TOKEN', 'Refresh token required.', 401);
 
     let decoded;

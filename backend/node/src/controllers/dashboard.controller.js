@@ -33,6 +33,12 @@ const getSummary = async (req, res, next) => {
       calories: m.calories,
       logged: m.logged,
       imageUrl: m.imageUrl,
+      // Include macros so the frontend can recalculate totals on meal toggle
+      macros: {
+        proteinG: m.macros?.proteinG || 0,
+        carbsG:   m.macros?.carbsG   || 0,
+        fatG:     m.macros?.fatG     || 0,
+      },
     }));
 
     return success(res, {

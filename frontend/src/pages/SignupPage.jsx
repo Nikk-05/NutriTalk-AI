@@ -1,21 +1,30 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import Button from '../components/Button'
-import { fetchAPI } from '../utils/apiCalls.js'
+import { fetchAPI, auth } from '../utils/apiCalls.js'
+import { setCredentials } from '../store/slices/authSlice'
+import { GOALS, DIETS, GENDERS, ACTIVITY_LEVELS, DEFAULTS, RANGES } from '../constants/appConstants'
 
-const steps = ['Your Info', 'Your Goals', 'Your Diet']
+const steps = ['Your Info', 'Your Body', 'Your Goals', 'Your Diet']
 
 export default function SignupPage() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     name: '', email: '', password: '',
-    goal: 'Weight Loss', calories: 1800, diet: 'None',
+    age:             DEFAULTS.age,
+    gender:          DEFAULTS.gender,
+    heightCm:        DEFAULTS.heightCm,
+    currentWeightKg: DEFAULTS.currentWeightKg,
+    targetWeightKg:  DEFAULTS.targetWeightKg,
+    activityLevel:   DEFAULTS.activityLevel,
+    goal:            DEFAULTS.primaryGoal,
+    calories:        DEFAULTS.dailyCalorieTarget,
+    diet:            DEFAULTS.dietaryRestriction,
   })
-
-  const goals = ['Weight Loss', 'Muscle Gain', 'Maintenance', 'Improved Energy']
-  const diets = ['None', 'Vegetarian', 'Vegan', 'Keto', 'Paleo']
 
   const handleNext = () => {
     if (step < steps.length - 1) setStep(s => s + 1)
@@ -27,10 +36,31 @@ export default function SignupPage() {
 
   async function handleSignup() {
     try {
-      const response = await fetchAPI('/auth/signup', 'POST', form)
-      console.log(response)
+      const payload = {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        age: Number(form.age),
+        gender: form.gender,
+        metrics: {
+          heightCm: Number(form.heightCm),
+          currentWeightKg: Number(form.currentWeightKg),
+          targetWeightKg: Number(form.targetWeightKg),
+          activityLevel: form.activityLevel,
+        },
+        preferences: {
+          primaryGoal: form.goal,
+          dailyCalorieTarget: Number(form.calories),
+          dietaryRestriction: form.diet,
+        },
+      }
+      const response = await fetchAPI('/auth/signup', 'POST', payload)
       if (response.status === 'success') {
-        sessionStorage.setItem('token', response.data.token)
+        // Persist token + user to sessionStorage (Axios interceptor reads from here)
+        auth.setToken(response.data.accessToken)
+        auth.setUser(response.data.user)
+        // Store user data in Redux so all components can access it reactively
+        dispatch(setCredentials({ user: response.data.user, token: response.data.accessToken }))
         navigate('/dashboard')
       }
     } catch (error) {
@@ -68,23 +98,11 @@ export default function SignupPage() {
               </div>
             ))}
           </div>
-          {/* Testimonial */}
-          <div className="mt-16 bg-surface-container-lowest rounded-2xl p-6 shadow-ambient-sm">
-            <div className="flex gap-1 text-secondary mb-3">
-              {[...Array(5)].map((_, j) => (
-                <span key={j} className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-              ))}
-            </div>
-            <p className="text-sm text-on-surface italic leading-relaxed">
-              &quot;I set up my plan in 3 minutes and NutriTalk had me eating better the same day!&quot;
-            </p>
-            <p className="text-xs font-bold text-primary mt-3">— Emma Liu, Fitness Coach</p>
-          </div>
         </div>
       </div>
 
       {/* Right panel — multi-step form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
+      <div className="flex-1 flex items-center justify-center px-6 py-12 overflow-y-auto">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <Link to="/" className="lg:hidden inline-flex items-center gap-2 mb-8">
@@ -106,7 +124,10 @@ export default function SignupPage() {
               Step {step + 1} of {steps.length}
             </p>
             <h1 className="text-3xl font-headline font-black text-on-surface">
-              {step === 0 ? 'Create your account' : step === 1 ? 'What is your goal?' : 'Dietary preferences'}
+              {step === 0 ? 'Create your account' :
+               step === 1 ? 'Tell us about you' :
+               step === 2 ? 'What is your goal?' :
+                            'Dietary preferences'}
             </h1>
           </div>
 
@@ -136,10 +157,101 @@ export default function SignupPage() {
             </div>
           )}
 
-          {/* Step 1 — Goals */}
+          {/* Step 1 — Body metrics */}
           {step === 1 && (
+            <div className="space-y-5">
+              {/* Age + Gender row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">Age</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-sm">cake</span>
+                    <input
+                      type="number" min={RANGES.age.min} max={RANGES.age.max}
+                      value={form.age}
+                      onChange={e => setForm(p => ({ ...p, age: e.target.value }))}
+                      className="w-full pl-11 pr-4 py-4 bg-surface-container-high rounded-full border border-transparent focus:outline-none focus:border-primary/30 focus:bg-surface-container-lowest transition-all text-on-surface font-body"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">Gender</label>
+                  <select
+                    value={form.gender}
+                    onChange={e => setForm(p => ({ ...p, gender: e.target.value }))}
+                    className="w-full px-4 py-4 bg-surface-container-high rounded-full border border-transparent focus:outline-none focus:border-primary/30 focus:bg-surface-container-lowest transition-all text-on-surface font-body"
+                  >
+                    {GENDERS.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Height */}
+              <div>
+                <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">
+                  Height: <span className="text-primary">{form.heightCm} cm</span>
+                </label>
+                <input
+                  type="range" min={RANGES.height.min} max={RANGES.height.max} step={RANGES.height.step}
+                  value={form.heightCm}
+                  onChange={e => setForm(p => ({ ...p, heightCm: +e.target.value }))}
+                  className="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary"
+                />
+              </div>
+
+              {/* Current weight */}
+              <div>
+                <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">
+                  Current Weight: <span className="text-primary">{form.currentWeightKg} kg</span>
+                </label>
+                <input
+                  type="range" min={RANGES.weight.min} max={RANGES.weight.max} step={RANGES.weight.step}
+                  value={form.currentWeightKg}
+                  onChange={e => setForm(p => ({ ...p, currentWeightKg: +e.target.value }))}
+                  className="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary"
+                />
+              </div>
+
+              {/* Target weight */}
+              <div>
+                <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">
+                  Target Weight: <span className="text-primary">{form.targetWeightKg} kg</span>
+                </label>
+                <input
+                  type="range" min={RANGES.weight.min} max={RANGES.weight.max} step={RANGES.weight.step}
+                  value={form.targetWeightKg}
+                  onChange={e => setForm(p => ({ ...p, targetWeightKg: +e.target.value }))}
+                  className="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary"
+                />
+              </div>
+
+              {/* Activity level */}
+              <div>
+                <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">Activity Level</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {ACTIVITY_LEVELS.map(a => (
+                    <button
+                      key={a.key}
+                      type="button"
+                      onClick={() => setForm(p => ({ ...p, activityLevel: a.key }))}
+                      className={`p-3 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${form.activityLevel === a.key
+                        ? 'border-primary bg-primary/5'
+                        : 'border-outline-variant/30 bg-surface-container-lowest hover:border-primary/30'
+                        }`}
+                    >
+                      <p className={`font-headline font-bold text-sm ${form.activityLevel === a.key ? 'text-primary' : 'text-on-surface'}`}>{a.label}</p>
+                      <p className="text-xs text-on-surface-variant mt-0.5">{a.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2 — Goals */}
+          {step === 2 && (
             <div className="space-y-3">
-              {goals.map(g => (
+              {GOALS.map(g => (
                 <button
                   key={g}
                   onClick={() => setForm(p => ({ ...p, goal: g }))}
@@ -160,7 +272,7 @@ export default function SignupPage() {
                   Daily Calorie Target: <span className="text-primary">{form.calories} kcal</span>
                 </label>
                 <input
-                  type="range" min={1200} max={3200} step={50}
+                  type="range" min={RANGES.calories.min} max={RANGES.calories.max} step={RANGES.calories.step}
                   value={form.calories}
                   onChange={e => setForm(p => ({ ...p, calories: +e.target.value }))}
                   className="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary"
@@ -169,10 +281,10 @@ export default function SignupPage() {
             </div>
           )}
 
-          {/* Step 2 — Diet */}
-          {step === 2 && (
+          {/* Step 3 — Diet */}
+          {step === 3 && (
             <div className="space-y-3">
-              {diets.map(d => (
+              {DIETS.map(d => (
                 <button
                   key={d}
                   onClick={() => setForm(p => ({ ...p, diet: d }))}
