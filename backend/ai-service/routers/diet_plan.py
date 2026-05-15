@@ -2,7 +2,7 @@ import json
 import re
 from fastapi import APIRouter, HTTPException
 from models.schemas import DietPlanRequest, DietPlanResponse
-from services.llm_service import generate_text
+from services.llm_service import generate_diet
 
 router = APIRouter(prefix="/diet-plan", tags=["AI Diet Plan"])
 
@@ -31,10 +31,10 @@ Return ONLY a valid JSON array with exactly {request.days} objects in this exact
     "day": "Monday",
     "total_calories": 1820,
     "meals": {{
-      "breakfast": {{"name": "Meal name", "calories": 340}},
-      "lunch":     {{"name": "Meal name", "calories": 520}},
-      "dinner":    {{"name": "Meal name", "calories": 680}},
-      "snack":     {{"name": "Meal name", "calories": 120}}
+      "breakfast": {{"name": "Meal name", "calories": 340, "micro_nutrients": {{"protein": 20g, "carbs": 40g, "fats": 10g, "fiber": 5g}}}},
+      "lunch":     {{"name": "Meal name", "calories": 520, "micro_nutrients": {{"protein": 25g, "carbs": 60g, "fats": 15g, "fiber": 8g}}}},
+      "dinner":    {{"name": "Meal name", "calories": 680, "micro_nutrients": {{"protein": 30g, "carbs": 70g, "fats": 20g, "fiber": 10g}}}},
+      "snack":     {{"name": "Meal name", "calories": 120, "micro_nutrients": {{"protein": 5g, "carbs": 20g, "fats": 5g, "fiber": 2g}}}}
     }}
   }}
 ]
@@ -60,12 +60,40 @@ Rules:
         raise HTTPException(status_code=500, detail="Could not parse AI response. Please try again.")
 
     # Normalize keys: snake_case → camelCase for Node.js consumption
+    # Also extract per-meal micro_nutrients so macros can be stored in MealLog
+    def parse_gram(val):
+        """Parse a value that may be a number or a string like '25g'."""
+        if isinstance(val, (int, float)):
+            return round(float(val), 1)
+        if isinstance(val, str):
+            try:
+                return round(float(val.replace('g', '').strip()), 1)
+            except ValueError:
+                return 0
+        return 0
+
     normalized = []
     for d in days_data:
+        normalized_meals = {}
+        for meal_key, meal_data in d.get("meals", {}).items():
+            if not isinstance(meal_data, dict):
+                continue
+            # Support both snake_case and camelCase keys from the LLM
+            mn = meal_data.get("micro_nutrients", meal_data.get("microNutrients", {}))
+            normalized_meals[meal_key] = {
+                "name": meal_data.get("name", ""),
+                "calories": meal_data.get("calories", 0),
+                "microNutrients": {
+                    "protein": parse_gram(mn.get("protein", 0)),
+                    "carbs":   parse_gram(mn.get("carbs",   0)),
+                    "fats":    parse_gram(mn.get("fats",    0)),
+                    "fiber":   parse_gram(mn.get("fiber",   0)),
+                },
+            }
         normalized.append({
             "day": d.get("day", ""),
             "totalCalories": d.get("total_calories", d.get("totalCalories", 0)),
-            "meals": d.get("meals", {}),
+            "meals": normalized_meals,
         })
 
     return {"data": {"days": normalized, "totalDays": len(normalized)}}

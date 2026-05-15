@@ -23,6 +23,6 @@ graph.add_edge("generate_text", END)
 
 workflow = graph.compile()
 
-def generate_diet(prompt):
-    answer = workflow.invoke(prompt)
-    return answer
+async def generate_diet(prompt: str) -> str:
+    result = await workflow.ainvoke({"query": prompt})
+    return result["answer"]

@@ -1,4 +1,4 @@
-import {MealLog} from '../models/MealLog.model.js';
+import { MealLog } from '../models/MealLog.model.js';
 import { WeightHistory } from '../models/DietPlan.model.js';
 import { success } from '../utils/response.utils.js';
 
@@ -12,10 +12,13 @@ const getSummary = async (req, res, next) => {
     // Meals logged today
     const meals = await MealLog.find({ user: userId, date: today });
 
-    const consumed = meals.reduce((sum, m) => sum + m.calories, 0);
-    const protein  = meals.reduce((sum, m) => sum + (m.macros?.proteinG || 0), 0);
-    const carbs    = meals.reduce((sum, m) => sum + (m.macros?.carbsG || 0), 0);
-    const fats     = meals.reduce((sum, m) => sum + (m.macros?.fatG || 0), 0);
+    // Only count meals the user has actually eaten (logged: true)
+    const loggedMeals = meals.filter(m => m.logged);
+    const consumed = loggedMeals.reduce((sum, m) => sum + m.calories, 0);
+    const protein = loggedMeals.reduce((sum, m) => sum + (m.macros?.proteinG || 0), 0);
+    const carbs = loggedMeals.reduce((sum, m) => sum + (m.macros?.carbsG || 0), 0);
+    const fats = loggedMeals.reduce((sum, m) => sum + (m.macros?.fatG || 0), 0);
+    const fiber = loggedMeals.reduce((sum, m) => sum + (m.macros?.fiberG || 0), 0);
 
     const target = user.preferences?.dailyCalorieTarget || 2000;
 
@@ -36,8 +39,9 @@ const getSummary = async (req, res, next) => {
       // Include macros so the frontend can recalculate totals on meal toggle
       macros: {
         proteinG: m.macros?.proteinG || 0,
-        carbsG:   m.macros?.carbsG   || 0,
-        fatG:     m.macros?.fatG     || 0,
+        carbsG: m.macros?.carbsG || 0,
+        fatG: m.macros?.fatG || 0,
+        fiberG: m.macros?.fiberG || 0,
       },
     }));
 
@@ -46,8 +50,9 @@ const getSummary = async (req, res, next) => {
       calories: { consumed, target, remaining: Math.max(0, target - consumed), burned: 0 },
       macros: {
         protein: { consumed: protein, target: user.preferences?.dailyCalorieTarget ? Math.round(target * 0.075) : 180 },
-        carbs:   { consumed: carbs,   target: Math.round(target * 0.5 / 4) },
-        fats:    { consumed: fats,    target: Math.round(target * 0.25 / 9) },
+        carbs: { consumed: carbs, target: Math.round(target * 0.5 / 4) },
+        fats: { consumed: fats, target: Math.round(target * 0.25 / 9) },
+        fiber: { consumed: fiber, target: user.preferences?.dailyCalorieTarget ? Math.round(target * 0.05) : 30 },
       },
       hydration: { consumedMl: 0, targetMl: 2000 }, // TODO: implement hydration logging
       weightHistory,

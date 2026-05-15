@@ -79,31 +79,32 @@ export default function DashboardPage() {
 
   // ── Derived calorie values (safe defaults while loading) ─
   const consumed = summary?.calories?.consumed ?? 0
-  const target   = summary?.calories?.target   ?? 2000
+  const target = summary?.calories?.target ?? 2000
   const remaining = summary?.calories?.remaining ?? target
 
   // ── Derived macro values ─────────────────────────────────
   const protein = summary?.macros?.protein ?? { consumed: 0, target: 180 }
-  const carbs   = summary?.macros?.carbs   ?? { consumed: 0, target: 250 }
-  const fats    = summary?.macros?.fats    ?? { consumed: 0, target: 70  }
+  const carbs = summary?.macros?.carbs ?? { consumed: 0, target: 250 }
+  const fats = summary?.macros?.fats ?? { consumed: 0, target: 70 }
+  const fiber = summary?.macros?.fiber ?? { consumed: 0, target: 30 }
 
   // ── Streak ───────────────────────────────────────────────
   const streakDays = summary?.streak?.current ?? 0
 
   // ── Activity ─────────────────────────────────────────────
-  const steps    = summary?.activity?.steps    ?? 0
+  const steps = summary?.activity?.steps ?? 0
   const stepGoal = summary?.activity?.stepGoal ?? DASHBOARD.stepGoal
 
   // ── Hydration (shown in subtitle) ────────────────────────
-  const hydration    = summary?.hydration ?? { consumedMl: 0, targetMl: DASHBOARD.hydrationTargetMl }
+  const hydration = summary?.hydration ?? { consumedMl: 0, targetMl: DASHBOARD.hydrationTargetMl }
   const hydrationPct = Math.round((hydration.consumedMl / hydration.targetMl) * 100)
 
   // ── Weight chart data ─────────────────────────────────────
   const chartSlots = buildChartData(weightHistory)
-  const validKgs   = chartSlots.map(s => s.kg).filter(Boolean)
-  const minKg      = validKgs.length ? Math.min(...validKgs) : 0
-  const maxKg      = validKgs.length ? Math.max(...validKgs) : 0
-  const rangeKg    = maxKg - minKg
+  const validKgs = chartSlots.map(s => s.kg).filter(Boolean)
+  const minKg = validKgs.length ? Math.min(...validKgs) : 0
+  const maxKg = validKgs.length ? Math.max(...validKgs) : 0
+  const rangeKg = maxKg - minKg
   const barHeights = chartSlots.map(s => normaliseHeight(s.kg, minKg, rangeKg))
   const chartLabels = chartSlots.map(s => DAY_LABELS[new Date(s.date).getDay()])
   // Index of today in the chart
@@ -112,13 +113,13 @@ export default function DashboardPage() {
 
   // ── Today's meals mapped to MealCard props ────────────────
   const todaysMeals = (summary?.todaysMeals ?? []).map((m, i) => ({
-    id:       m.id,
-    meal:     m.name,
-    time:     m.type ? m.type.charAt(0).toUpperCase() + m.type.slice(1) : 'Meal',
+    id: m.id,
+    meal: m.name,
+    time: m.type ? m.type.charAt(0).toUpperCase() + m.type.slice(1) : 'Meal',
     calories: m.calories,
-    logged:   m.logged,
-    color:    MEAL_COLOR[m.type?.toLowerCase()] ?? (i % 2 === 0 ? 'primary' : 'secondary'),
-    image:    m.imageUrl || '',
+    logged: m.logged,
+    color: MEAL_COLOR[m.type?.toLowerCase()] ?? (i % 2 === 0 ? 'primary' : 'secondary'),
+    image: m.imageUrl || '',
   }))
 
   // ── Meal toggle handler — dispatches optimistic update ────
@@ -191,10 +192,12 @@ export default function DashboardPage() {
                     <span>Ask AI</span>
                   </button>
                 </Link>
+                <Link to ="/profile">
                 <button className="flex items-center gap-3 w-full bg-surface-container-highest text-on-surface-variant p-4 rounded-full font-bold transition-all hover:bg-surface-container-high active:scale-95">
                   <span className="material-symbols-outlined">edit_square</span>
                   <span>Update Goal</span>
                 </button>
+                </Link>
               </div>
             </div>
 
@@ -211,8 +214,8 @@ export default function DashboardPage() {
                   {streakDays >= 7
                     ? 'Incredible — full week streak!'
                     : streakDays >= 3
-                    ? 'Keep the momentum going!'
-                    : 'Log a meal today to start your streak.'}
+                      ? 'Keep the momentum going!'
+                      : 'Log a meal today to start your streak.'}
                 </p>
               </div>
               <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
@@ -250,7 +253,7 @@ export default function DashboardPage() {
                   sublabel="Remaining"
                 />
                 <div className="flex-1 w-full space-y-5">
-                  {/* Macro breakdown — protein, carbs, fats */}
+                  {/* Macro breakdown — protein, carbs, fats, fiber */}
                   <ProgressBar
                     value={protein.consumed}
                     max={protein.target}
@@ -272,6 +275,13 @@ export default function DashboardPage() {
                     label="Fats"
                     sublabel={`${fats.consumed}g / ${fats.target}g`}
                   />
+                  <ProgressBar
+                    value={fiber.consumed}
+                    max={fiber.target}
+                    color="secondary"
+                    label="Fiber"
+                    sublabel={`${fiber.consumed}g / ${fiber.target}g`}
+                  />
                 </div>
               </div>
             </div>
@@ -286,11 +296,10 @@ export default function DashboardPage() {
                     <button
                       key={p}
                       onClick={() => dispatch(setPeriod(p))}
-                      className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest cursor-pointer transition-colors ${
-                        period === p
+                      className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest cursor-pointer transition-colors ${period === p
                           ? 'bg-primary/10 text-primary'
                           : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container'
-                      }`}
+                        }`}
                     >
                       {p === '7d' ? '7 Days' : '30 Days'}
                     </button>
@@ -311,13 +320,12 @@ export default function DashboardPage() {
                     {chartSlots.map((slot, i) => (
                       <div
                         key={slot.date}
-                        className={`flex-1 rounded-t-lg relative transition-all duration-500 ${
-                          i === todayIdx
+                        className={`flex-1 rounded-t-lg relative transition-all duration-500 ${i === todayIdx
                             ? 'bg-primary-container'
                             : slot.kg !== null
-                            ? 'bg-primary'
-                            : 'bg-surface-container-high'
-                        }`}
+                              ? 'bg-primary'
+                              : 'bg-surface-container-high'
+                          }`}
                         style={{ height: `${barHeights[i] || 4}%` }}
                       >
                         {/* Tooltip with actual kg value for today's bar */}

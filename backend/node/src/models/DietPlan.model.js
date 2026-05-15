@@ -14,15 +14,16 @@ const dietPlanSchema = new mongoose.Schema({
   cuisinePreferences: { type: [String], default: [] },
   totalDays: { type: Number, default: 7 },
   isSaved: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: false },
   days: [
     {
       day: String,
       totalCalories: Number,
       meals: {
-        breakfast: { name: String, calories: Number, recipeId: { type: String, default: null } },
-        lunch:     { name: String, calories: Number, recipeId: { type: String, default: null } },
-        dinner:    { name: String, calories: Number, recipeId: { type: String, default: null } },
-        snack:     { name: String, calories: Number, recipeId: { type: String, default: null } },
+        breakfast: { name: String, calories: Number, recipeId: { type: String, default: null }, microNutrients: { protein: { type: Number, default: 0 }, carbs: { type: Number, default: 0 }, fats: { type: Number, default: 0 }, fiber: { type: Number, default: 0 } } },
+        lunch:     { name: String, calories: Number, recipeId: { type: String, default: null }, microNutrients: { protein: { type: Number, default: 0 }, carbs: { type: Number, default: 0 }, fats: { type: Number, default: 0 }, fiber: { type: Number, default: 0 } } },
+        dinner:    { name: String, calories: Number, recipeId: { type: String, default: null }, microNutrients: { protein: { type: Number, default: 0 }, carbs: { type: Number, default: 0 }, fats: { type: Number, default: 0 }, fiber: { type: Number, default: 0 } } },
+        snack:     { name: String, calories: Number, recipeId: { type: String, default: null }, microNutrients: { protein: { type: Number, default: 0 }, carbs: { type: Number, default: 0 }, fats: { type: Number, default: 0 }, fiber: { type: Number, default: 0 } } },
       },
     },
   ],

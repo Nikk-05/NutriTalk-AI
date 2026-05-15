@@ -12,6 +12,7 @@ function recalcFromMeals(summary, meals) {
   const protein  = logged.reduce((s, m) => s + (m.macros?.proteinG || 0), 0)
   const carbs    = logged.reduce((s, m) => s + (m.macros?.carbsG   || 0), 0)
   const fats     = logged.reduce((s, m) => s + (m.macros?.fatG     || 0), 0)
+  const fiber    = logged.reduce((s, m) => s + (m.macros?.fiberG   || 0), 0)
   const target   = summary.calories.target
   return {
     calories: { ...summary.calories, consumed, remaining: Math.max(0, target - consumed) },
@@ -19,6 +20,7 @@ function recalcFromMeals(summary, meals) {
       protein: { ...summary.macros.protein, consumed: protein },
       carbs:   { ...summary.macros.carbs,   consumed: carbs   },
       fats:    { ...summary.macros.fats,    consumed: fats    },
+      fiber:   { ...summary.macros.fiber,   consumed: fiber   },
     },
   }
 }

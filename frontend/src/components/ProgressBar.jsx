@@ -1,7 +1,7 @@
 const colorMap = {
   primary: 'bg-primary',
   secondary: 'bg-secondary-container',
-  tertiary: 'bg-tertiary',
+  tertiary: 'bg-tertiary-container',
 }
 
 export default function ProgressBar({ value = 0, max = 100, color = 'primary', label, sublabel }) {

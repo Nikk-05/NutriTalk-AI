@@ -21,17 +21,22 @@ import {
   generatePlan,
   savePlan,
   seedTodayFromPlan,
+  deletePlan,
+  setActivePlan,
   setCurrentPlan,
   clearError,
   selectSavedPlans,
   selectCurrentPlan,
   selectCurrentPlanId,
+  selectActivePlanId,
   selectIsPlanSaved,
   selectIsSeeded,
   selectSeededCount,
   selectGenerating,
   selectSaving,
   selectSeeding,
+  selectDeleting,
+  selectSettingActive,
   selectLoadingPlans,
   selectDietPlanError,
 } from '../store/slices/dietPlanSlice'
@@ -44,12 +49,15 @@ export default function DietPlanPage() {
   const savedPlans    = useSelector(selectSavedPlans)
   const currentPlan   = useSelector(selectCurrentPlan)
   const currentPlanId = useSelector(selectCurrentPlanId)
+  const activePlanId  = useSelector(selectActivePlanId)
   const isSaved       = useSelector(selectIsPlanSaved)
   const isSeeded      = useSelector(selectIsSeeded)
   const seededCount   = useSelector(selectSeededCount)
   const generating    = useSelector(selectGenerating)
   const saving        = useSelector(selectSaving)
   const seeding       = useSelector(selectSeeding)
+  const deleting      = useSelector(selectDeleting)
+  const settingActive = useSelector(selectSettingActive)
   const loadingPlans  = useSelector(selectLoadingPlans)
   const error         = useSelector(selectDietPlanError)
 
@@ -244,26 +252,85 @@ export default function DietPlanPage() {
               <h3 className="font-headline font-bold text-base mb-4">Saved Plans</h3>
               {loadingPlans ? (
                 <div className="space-y-2 animate-pulse">
-                  {[1,2].map(i => <div key={i} className="h-12 bg-surface-container rounded-lg" />)}
+                  {[1,2].map(i => <div key={i} className="h-14 bg-surface-container rounded-lg" />)}
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {savedPlans.map(p => (
-                    <button
-                      key={p._id}
-                      onClick={() => handleLoadSaved(p)}
-                      className={`w-full text-left p-3 rounded-lg transition-all text-sm ${
-                        currentPlanId === p._id
-                          ? 'bg-primary/10 text-primary font-bold'
-                          : 'bg-surface-container-low hover:bg-surface-container text-on-surface-variant'
-                      }`}
-                    >
-                      <p className="font-bold truncate">{p.title || `${p.goal} Plan`}</p>
-                      <p className="text-xs opacity-60 mt-0.5">
-                        {p.dailyCalorieTarget} kcal · {p.dietaryRestriction}
-                      </p>
-                    </button>
-                  ))}
+                <div className="space-y-3">
+                  {savedPlans.map(p => {
+                    const isActive   = p._id === activePlanId
+                    const isCurrent  = p._id === currentPlanId
+                    const isDeleting = deleting === p._id
+                    const isSettingA = settingActive === p._id
+                    return (
+                      <div
+                        key={p._id}
+                        className={`rounded-xl border-2 p-4 transition-all ${
+                          isCurrent
+                            ? 'border-primary/40 bg-primary/5'
+                            : 'border-surface-container-high bg-surface-container-low hover:border-surface-container-highest'
+                        }`}
+                      >
+                        {/* Top row: name + active badge */}
+                        <div className="flex items-start gap-2 mb-1">
+                          <p
+                            className={`font-bold text-sm leading-snug flex-1 cursor-pointer hover:underline ${
+                              isCurrent ? 'text-primary' : 'text-on-surface'
+                            }`}
+                            onClick={() => handleLoadSaved(p)}
+                          >
+                            {p.title || `${p.goal} Plan`}
+                          </p>
+                          {isActive && (
+                            <span className="shrink-0 flex items-center gap-0.5 bg-primary text-on-primary text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mt-0.5">
+                              <span className="material-symbols-outlined" style={{ fontSize: '10px', fontVariationSettings: "'FILL' 1" }}>bolt</span>
+                              Active
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Subtitle */}
+                        <p className="text-[11px] text-outline mb-3">
+                          {p.dailyCalorieTarget} kcal &bull; {p.dietaryRestriction}
+                        </p>
+
+                        {/* Action row */}
+                        <div className="flex items-center gap-2 pt-2 border-t border-surface-container-high">
+                          {!isActive ? (
+                            <button
+                              onClick={() => dispatch(setActivePlan(p._id))}
+                              disabled={!!settingActive || !!deleting}
+                              className="flex items-center gap-1.5 text-[11px] font-bold text-primary/70 hover:text-primary disabled:opacity-40 transition-colors py-1 px-2 rounded-lg hover:bg-primary/8"
+                            >
+                              {isSettingA
+                                ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: '14px' }}>refresh</span>
+                                : <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>bolt</span>
+                              }
+                              Set Active
+                            </button>
+                          ) : (
+                            <span className="flex items-center gap-1.5 text-[11px] font-bold text-primary/50 py-1 px-2">
+                              <span className="material-symbols-outlined" style={{ fontSize: '14px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                              Dashboard synced
+                            </span>
+                          )}
+
+                          <div className="flex-1" />
+
+                          <button
+                            onClick={() => dispatch(deletePlan(p._id))}
+                            disabled={!!deleting || !!settingActive}
+                            className="flex items-center gap-1.5 text-[11px] font-bold text-outline hover:text-error disabled:opacity-40 transition-colors py-1 px-2 rounded-lg hover:bg-error/5"
+                          >
+                            {isDeleting
+                              ? <span className="material-symbols-outlined animate-spin" style={{ fontSize: '14px' }}>refresh</span>
+                              : <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>delete</span>
+                            }
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -300,10 +367,18 @@ export default function DietPlanPage() {
             <div className="bg-surface-container-lowest rounded-lg p-8 shadow-ambient">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h2 className="font-headline text-2xl font-bold">
-                    {currentPlan.title || `${currentPlan.goal || selectedGoal} Plan`}
-                  </h2>
-                  <p className="text-outline text-sm mt-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h2 className="font-headline text-2xl font-bold">
+                      {currentPlan.title || `${currentPlan.goal || selectedGoal} Plan`}
+                    </h2>
+                    {currentPlanId === activePlanId && activePlanId && (
+                      <span className="flex items-center gap-0.5 bg-primary text-on-primary text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">
+                        <span className="material-symbols-outlined" style={{ fontSize: '10px', fontVariationSettings: "'FILL' 1" }}>bolt</span>
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-outline text-sm">
                     {currentPlan.goal || selectedGoal} ·{' '}
                     {(currentPlan.dietaryRestriction || selectedDiet) !== 'None'
                       ? currentPlan.dietaryRestriction || selectedDiet
@@ -323,30 +398,78 @@ export default function DietPlanPage() {
               {/* Day cards — each day from currentPlan.days */}
               <div className="space-y-4">
                 {(currentPlan.days || []).map((dayObj, index) => (
-                  <div key={index} className="bg-surface-container-low rounded-lg p-5 hover:shadow-ambient-sm transition-all">
+                  <div key={index} className="bg-surface-container-low rounded-xl p-5 hover:shadow-ambient-sm transition-all">
+                    {/* Day header */}
                     <div className="flex items-center justify-between mb-4">
-                      <span className="font-headline font-black text-primary text-lg">
-                        {typeof dayObj.day === 'string' ? dayObj.day.slice(0, 3) : `Day ${index + 1}`}
-                      </span>
-                      {dayObj.totalCalories && (
-                        <span className="text-[10px] font-bold text-outline uppercase tracking-widest">
-                          {dayObj.totalCalories} kcal
+                      <div>
+                        <span className="font-headline font-black text-primary text-lg">
+                          {typeof dayObj.day === 'string' ? dayObj.day : `Day ${index + 1}`}
                         </span>
+                      </div>
+                      {dayObj.totalCalories && (
+                        <div className="flex items-baseline gap-1 bg-primary/10 px-3 py-1 rounded-full">
+                          <span className="text-sm font-black text-primary font-headline">{dayObj.totalCalories}</span>
+                          <span className="text-[9px] font-bold text-primary/70 uppercase tracking-wider">kcal/day</span>
+                        </div>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+                    {/* Meal cards grid — 2 columns for readability */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {DIET_PLAN.MEAL_SLOTS.map(({ key, label, icon, color }) => {
                         const meal = dayObj.meals?.[key]
                         if (!meal?.name) return null
+                        const mn = meal.microNutrients || {}
+                        const hasMacros = mn.protein > 0 || mn.carbs > 0 || mn.fats > 0
                         return (
-                          <div key={key} className="bg-surface-container-lowest rounded-lg p-3">
-                            <div className={`flex items-center gap-1.5 mb-1.5 ${color}`}>
-                              <span className="material-symbols-outlined text-sm">{icon}</span>
-                              <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
+                          <div key={key} className="bg-surface-container-lowest rounded-xl p-4 flex flex-col gap-2 border border-surface-container-high hover:border-primary/20 transition-colors">
+                            {/* Header: type label + calories */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className={`flex items-center gap-1.5 ${color}`}>
+                                <span className="material-symbols-outlined" style={{ fontSize: '15px', fontVariationSettings: "'FILL' 1" }}>{icon}</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+                              </div>
+                              {meal.calories && (
+                                <div className="flex items-baseline gap-0.5 shrink-0">
+                                  <span className="text-base font-black text-on-surface font-headline leading-none">{meal.calories}</span>
+                                  <span className="text-[9px] text-outline font-bold ml-0.5">kcal</span>
+                                </div>
+                              )}
                             </div>
-                            <p className="text-sm font-semibold text-on-surface leading-tight">{meal.name}</p>
-                            {meal.calories && (
-                              <p className="text-[10px] text-outline mt-1">{meal.calories} kcal</p>
+
+                            {/* Meal name */}
+                            <p className="text-sm font-semibold text-on-surface leading-snug">{meal.name}</p>
+
+                            {/* Macro nutrient chips */}
+                            {hasMacros && (
+                              <div className="mt-0.5 pt-2.5 border-t border-surface-container-high grid grid-cols-2 gap-x-4 gap-y-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                                  <span className="text-[10px] text-on-surface-variant">
+                                    <span className="font-bold text-on-surface">{mn.protein}g</span> Protein
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2 h-2 rounded-full bg-secondary shrink-0" />
+                                  <span className="text-[10px] text-on-surface-variant">
+                                    <span className="font-bold text-on-surface">{mn.carbs}g</span> Carbs
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2 h-2 rounded-full bg-tertiary shrink-0" />
+                                  <span className="text-[10px] text-on-surface-variant">
+                                    <span className="font-bold text-on-surface">{mn.fats}g</span> Fats
+                                  </span>
+                                </div>
+                                {mn.fiber > 0 && (
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-2 h-2 rounded-full bg-outline shrink-0" />
+                                    <span className="text-[10px] text-on-surface-variant">
+                                      <span className="font-bold text-on-surface">{mn.fiber}g</span> Fiber
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
                         )

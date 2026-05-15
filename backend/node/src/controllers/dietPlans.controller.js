@@ -29,7 +29,6 @@ const generatePlan = async (req, res, next) => {
     });
 
     const generated = aiResponse.data;
-    console.log(generated)
 
     // Save temp plan to DB (unsaved until user explicitly saves)
     const plan = await DietPlan.create({
@@ -63,11 +62,30 @@ const getPlan = async (req, res, next) => {
 };
 
 // ── POST /diet-plans/:id/save ──────────────────────────────
+// Saves the plan and marks it as the active plan for this user.
 const savePlan = async (req, res, next) => {
   try {
+    // Deactivate all other plans for this user first
+    await DietPlan.updateMany({ user: req.user._id, isActive: true }, { isActive: false });
+
     const plan = await DietPlan.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id },
-      { isSaved: true, title: req.body.title || 'My AI Diet Plan' },
+      { isSaved: true, isActive: true, title: req.body.title || 'My AI Diet Plan' },
+      { new: true }
+    );
+    if (!plan) return notFound(res, 'Plan not found.');
+    return success(res, { plan });
+  } catch (err) { next(err); }
+};
+
+// ── PATCH /diet-plans/:id/set-active ──────────────────────
+// Marks one plan as active and deactivates all others for this user.
+const setActivePlan = async (req, res, next) => {
+  try {
+    await DietPlan.updateMany({ user: req.user._id, isActive: true }, { isActive: false });
+    const plan = await DietPlan.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id, isSaved: true },
+      { isActive: true },
       { new: true }
     );
     if (!plan) return notFound(res, 'Plan not found.');
@@ -101,16 +119,21 @@ const seedToday = async (req, res, next) => {
     const dayData = plan.days.find(d => d.day?.toLowerCase() === dayName.toLowerCase());
     if (!dayData) return success(res, { message: `No meals planned for ${dayName}.`, seeded: 0 });
 
+    // Remove any previously planned (unlogged) meals for today so the new active
+    // plan replaces them cleanly. Meals the user already marked as eaten are kept.
+    await MealLog.deleteMany({ user: req.user._id, date: today, logged: false });
+
+    // Mark this plan as the active one (deactivate others)
+    await DietPlan.updateMany({ user: req.user._id, isActive: true }, { isActive: false });
+    plan.isActive = true;
+    await plan.save();
+
     const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
     let seeded = 0;
 
     for (const type of mealTypes) {
       const meal = dayData.meals?.[type];
       if (!meal?.name) continue;
-
-      // Skip if already seeded for today (idempotent check)
-      const exists = await MealLog.findOne({ user: req.user._id, date: today, type, name: meal.name });
-      if (exists) continue;
 
       await MealLog.create({
         user:     req.user._id,
@@ -119,7 +142,7 @@ const seedToday = async (req, res, next) => {
         name:     meal.name,
         calories: meal.calories || 0,
         logged:   false, // planned, not yet eaten — user marks true when they eat it
-        macros:   { proteinG: 0, carbsG: 0, fatG: 0, fiberG: 0 },
+        macros:   { proteinG: meal.microNutrients?.protein || 0, carbsG: meal.microNutrients?.carbs || 0, fatG: meal.microNutrients?.fats || 0, fiberG: meal.microNutrients?.fiber || 0 },
       });
       seeded++;
     }
@@ -128,4 +151,4 @@ const seedToday = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-export default { getPlans, generatePlan, getPlan, savePlan, deletePlan, seedToday };
+export default { getPlans, generatePlan, getPlan, savePlan, setActivePlan, deletePlan, seedToday };
