@@ -11,10 +11,11 @@
 //                     Creates MealLog entries (logged: false) so the
 //                     dashboard reflects today's planned meals.
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Button from '../components/Button'
 import { GOALS, DIETS, CUISINES, DEFAULTS, RANGES, DIET_PLAN } from '../constants/appConstants'
+import { calculateTDEE, getGoalCalories, getCalorieWarning } from '../utils/tdee'
 import { selectUser } from '../store/slices/authSlice'
 import {
   fetchSavedPlans,
@@ -67,6 +68,11 @@ export default function DietPlanPage() {
   const [calories,         setCalories]         = useState(user?.preferences?.dailyCalorieTarget || DEFAULTS.dailyCalorieTarget)
   const [selectedCuisines, setSelectedCuisines] = useState(user?.preferences?.cuisinePreferences || [])
 
+  // ── TDEE & goal-aware calorie recommendation ───────────────
+  const tdee = useMemo(() => calculateTDEE(user), [user])
+  const recommendedCalories = useMemo(() => getGoalCalories(tdee, selectedGoal), [tdee, selectedGoal])
+  const calorieWarning = useMemo(() => getCalorieWarning(calories, tdee, selectedGoal), [calories, tdee, selectedGoal])
+
   // ── Sync form when a saved plan is auto-loaded on mount ────
   useEffect(() => {
     if (currentPlan) {
@@ -91,6 +97,14 @@ export default function DietPlanPage() {
 
   const toggleCuisine = (c) =>
     setSelectedCuisines(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+
+  // When user picks a goal, auto-set calories to the recommended value for that goal
+  const handleGoalChange = (g) => {
+    setSelectedGoal(g)
+    if (tdee) {
+      setCalories(getGoalCalories(tdee, g))
+    }
+  }
 
   // ── Generate — dispatches thunk with current form values ───
   const handleGenerate = () => {
@@ -151,7 +165,7 @@ export default function DietPlanPage() {
                 {GOALS.map(g => (
                   <button
                     key={g}
-                    onClick={() => setSelectedGoal(g)}
+                    onClick={() => handleGoalChange(g)}
                     className={`px-4 py-2 rounded-full text-sm font-bold transition-all active:scale-95 ${
                       selectedGoal === g
                         ? 'primary-gradient text-on-primary shadow-primary-sm'
@@ -188,9 +202,13 @@ export default function DietPlanPage() {
 
             {/* Calorie target slider */}
             <div className="mb-6">
-              <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-3 block">
-                Daily Calorie Target: <span className="text-primary">{calories} kcal</span>
-              </label>
+              <div className="flex items-baseline justify-between mb-3">
+                <label className="font-label text-xs font-bold uppercase tracking-widest text-outline">
+                  Daily Calorie Target
+                </label>
+                <span className="text-lg font-black text-primary font-headline leading-none">{calories} kcal</span>
+              </div>
+
               <input
                 type="range"
                 min={RANGES.calories.min} max={RANGES.calories.max} step={RANGES.calories.step}
@@ -198,9 +216,61 @@ export default function DietPlanPage() {
                 onChange={e => setCalories(+e.target.value)}
                 className="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary"
               />
-              <div className="flex justify-between text-xs text-outline mt-1.5 font-bold">
+              <div className="flex justify-between text-[10px] text-outline mt-1 font-bold">
                 <span>{RANGES.calories.min}</span><span>{RANGES.calories.max}</span>
               </div>
+
+              {/* TDEE reference rows — clean, borderless, below the slider */}
+              {tdee ? (
+                <div className="mt-4 pt-3 border-t border-surface-container-high space-y-2.5">
+                  {/* TDEE row */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-on-surface-variant">
+                      <span className="material-symbols-outlined" style={{ fontSize: '15px', fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
+                      <span className="text-xs font-semibold">Your TDEE</span>
+                    </div>
+                    <span className="text-xs font-black text-on-surface">{tdee.toLocaleString()} <span className="text-outline font-bold">kcal/day</span></span>
+                  </div>
+
+                  {/* Recommended row */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-on-surface-variant">
+                      <span className="material-symbols-outlined text-primary" style={{ fontSize: '15px', fontVariationSettings: "'FILL' 1" }}>bolt</span>
+                      <span className="text-xs font-semibold">Recommended <span className="text-outline font-normal">for {selectedGoal}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xs font-black text-primary">{recommendedCalories?.toLocaleString()} <span className="text-primary/60 font-bold">kcal</span></span>
+                      {calories !== recommendedCalories && (
+                        <button
+                          onClick={() => setCalories(recommendedCalories)}
+                          className="text-[10px] font-black text-primary underline decoration-primary/40 hover:decoration-primary underline-offset-2 transition-all"
+                        >
+                          Apply
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 flex items-center gap-1.5 text-[11px] text-outline">
+                  <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>person_add</span>
+                  Complete height, weight &amp; age in Profile for a personalised recommendation.
+                </p>
+              )}
+
+              {/* Inline conflict warning — no box, just coloured text */}
+              {calorieWarning && (
+                <div className={`mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed ${
+                  calorieWarning.type === 'error'   ? 'text-error' :
+                  calorieWarning.type === 'warning' ? 'text-amber-600' :
+                  'text-primary'
+                }`}>
+                  <span className="material-symbols-outlined shrink-0 mt-px" style={{ fontSize: '14px', fontVariationSettings: "'FILL' 1" }}>
+                    {calorieWarning.type === 'error' ? 'error' : calorieWarning.type === 'warning' ? 'warning' : 'info'}
+                  </span>
+                  <span>{calorieWarning.msg}</span>
+                </div>
+              )}
             </div>
 
             {/* Cuisine preferences */}

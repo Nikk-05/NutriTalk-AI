@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import Button from '../components/Button'
 import { fetchAPI, auth } from '../utils/apiCalls.js'
 import { setCredentials } from '../store/slices/authSlice'
 import { GOALS, DIETS, GENDERS, ACTIVITY_LEVELS, DEFAULTS, RANGES } from '../constants/appConstants'
+import { calculateTDEE, getGoalCalories } from '../utils/tdee'
 
 const steps = ['Your Info', 'Your Body', 'Your Goals', 'Your Diet']
 
@@ -22,9 +23,17 @@ export default function SignupPage() {
     targetWeightKg:  DEFAULTS.targetWeightKg,
     activityLevel:   DEFAULTS.activityLevel,
     goal:            DEFAULTS.primaryGoal,
-    calories:        DEFAULTS.dailyCalorieTarget,
     diet:            DEFAULTS.dietaryRestriction,
   })
+
+  // Compute TDEE live from step-1 values so step-2 can preview the target
+  const previewTDEE = useMemo(() => calculateTDEE({
+    age:     form.age,
+    gender:  form.gender,
+    metrics: { heightCm: form.heightCm, currentWeightKg: form.currentWeightKg, activityLevel: form.activityLevel },
+  }), [form.age, form.gender, form.heightCm, form.currentWeightKg, form.activityLevel])
+
+  const previewTarget = useMemo(() => getGoalCalories(previewTDEE, form.goal), [previewTDEE, form.goal])
 
   const handleNext = () => {
     if (step < steps.length - 1) setStep(s => s + 1)
@@ -50,8 +59,8 @@ export default function SignupPage() {
         },
         preferences: {
           primaryGoal: form.goal,
-          dailyCalorieTarget: Number(form.calories),
           dietaryRestriction: form.diet,
+          // dailyCalorieTarget is computed server-side from metrics + goal (Mifflin-St Jeor)
         },
       }
       const response = await fetchAPI('/auth/signup', 'POST', payload)
@@ -260,24 +269,63 @@ export default function SignupPage() {
                     : 'border-outline-variant/30 bg-surface-container-lowest hover:border-primary/30'
                     }`}
                 >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${form.goal === g ? 'border-primary bg-primary' : 'border-outline'
-                    }`}>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${form.goal === g ? 'border-primary bg-primary' : 'border-outline'}`}>
                     {form.goal === g && <span className="w-2 h-2 bg-on-primary rounded-full" />}
                   </div>
                   <span className={`font-headline font-bold ${form.goal === g ? 'text-primary' : 'text-on-surface'}`}>{g}</span>
                 </button>
               ))}
-              <div className="mt-2">
-                <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">
-                  Daily Calorie Target: <span className="text-primary">{form.calories} kcal</span>
-                </label>
-                <input
-                  type="range" min={RANGES.calories.min} max={RANGES.calories.max} step={RANGES.calories.step}
-                  value={form.calories}
-                  onChange={e => setForm(p => ({ ...p, calories: +e.target.value }))}
-                  className="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary"
-                />
-              </div>
+
+              {/* TDEE-computed calorie preview — replaces the manual slider */}
+              {previewTDEE ? (
+                <div className="mt-2 rounded-2xl border-2 border-primary/20 bg-primary/5 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="material-symbols-outlined text-primary" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>calculate</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-primary">Your AI-computed target</span>
+                  </div>
+
+                  {/* Breakdown rows */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-on-surface-variant">
+                        <span className="material-symbols-outlined" style={{ fontSize: '15px', fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
+                        <span className="font-medium">Maintenance (TDEE)</span>
+                      </div>
+                      <span className="font-bold text-on-surface">{previewTDEE.toLocaleString()} kcal</span>
+                    </div>
+
+                    {form.goal !== 'Maintenance' && form.goal !== 'Better Sleep' && (
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 text-on-surface-variant">
+                          <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
+                            {['Weight Loss', 'Improved Energy'].includes(form.goal) ? 'remove' : 'add'}
+                          </span>
+                          <span className="font-medium">Goal adjustment</span>
+                        </div>
+                        <span className={`font-bold ${['Weight Loss', 'Improved Energy'].includes(form.goal) ? 'text-error' : 'text-primary'}`}>
+                          {['Weight Loss', 'Improved Energy'].includes(form.goal) ? '−' : '+'}{Math.abs(previewTarget - previewTDEE).toLocaleString()} kcal
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="border-t border-primary/15 pt-2 flex items-center justify-between">
+                      <span className="text-sm font-black text-on-surface">Your daily target</span>
+                      <span className="text-xl font-black text-primary font-headline">{previewTarget?.toLocaleString()} kcal</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-outline leading-relaxed">
+                    Calculated from your body stats using the Mifflin-St Jeor formula. You can adjust this anytime in the Diet Planner.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-2 flex items-center gap-3 p-4 rounded-xl bg-surface-container-high">
+                  <span className="material-symbols-outlined text-outline" style={{ fontSize: '18px' }}>info</span>
+                  <p className="text-xs text-outline">
+                    Fill in your body stats in the previous step to get an AI-computed calorie target.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
