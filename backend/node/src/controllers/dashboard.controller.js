@@ -1,5 +1,5 @@
 import { MealLog } from '../models/MealLog.model.js';
-import { WeightHistory } from '../models/DietPlan.model.js';
+import { DietPlan, WeightHistory } from '../models/DietPlan.model.js';
 import { success } from '../utils/response.utils.js';
 
 // ── GET /dashboard/summary ─────────────────────────────────
@@ -9,10 +9,10 @@ const getSummary = async (req, res, next) => {
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const user = req.user;
 
-    // Meals logged today
+    // Meals logged today (all — planned and eaten)
     const meals = await MealLog.find({ user: userId, date: today });
 
-    // Only count meals the user has actually eaten (logged: true)
+    // Consumed = only meals the user has actually eaten (logged: true)
     const loggedMeals = meals.filter(m => m.logged);
     const consumed = loggedMeals.reduce((sum, m) => sum + m.calories, 0);
     const protein = loggedMeals.reduce((sum, m) => sum + (m.macros?.proteinG || 0), 0);
@@ -20,7 +20,21 @@ const getSummary = async (req, res, next) => {
     const fats = loggedMeals.reduce((sum, m) => sum + (m.macros?.fatG || 0), 0);
     const fiber = loggedMeals.reduce((sum, m) => sum + (m.macros?.fiberG || 0), 0);
 
-    const target = user.preferences?.dailyCalorieTarget || 2000;
+    // Macro targets = sum of ALL today's planned meals (logged or not) — the full day's plan
+    const proteinTarget = meals.reduce((sum, m) => sum + (m.macros?.proteinG || 0), 0);
+    const carbsTarget = meals.reduce((sum, m) => sum + (m.macros?.carbsG || 0), 0);
+    const fatsTarget = meals.reduce((sum, m) => sum + (m.macros?.fatG || 0), 0);
+    const fiberTarget = meals.reduce((sum, m) => sum + (m.macros?.fiberG || 0), 0);
+
+    // Calorie target: prefer active diet plan's target, fallback to profile TDEE
+    const activePlan = await DietPlan.findOne({ user: userId, isActive: true, isSaved: true }).lean();
+    const target = activePlan?.dailyCalorieTarget || user.preferences?.dailyCalorieTarget || 2000;
+
+    // Fallback macro targets when no meals are seeded (use % of calorie target)
+    const macroProteinTarget = proteinTarget || Math.round(target * 0.075);
+    const macroCarbsTarget = carbsTarget || Math.round(target * 0.5 / 4);
+    const macroFatsTarget = fatsTarget || Math.round(target * 0.25 / 9);
+    const macroFiberTarget = fiberTarget || 30;
 
     // Weight history (last 7 days)
     const wh = await WeightHistory.findOne({ user: userId });
@@ -49,10 +63,10 @@ const getSummary = async (req, res, next) => {
       date: today,
       calories: { consumed, target, remaining: Math.max(0, target - consumed), burned: 0 },
       macros: {
-        protein: { consumed: protein, target: user.preferences?.dailyCalorieTarget ? Math.round(target * 0.075) : 180 },
-        carbs: { consumed: carbs, target: Math.round(target * 0.5 / 4) },
-        fats: { consumed: fats, target: Math.round(target * 0.25 / 9) },
-        fiber: { consumed: fiber, target: user.preferences?.dailyCalorieTarget ? Math.round(target * 0.05) : 30 },
+        protein: { consumed: protein, target: macroProteinTarget },
+        carbs: { consumed: carbs, target: macroCarbsTarget },
+        fats: { consumed: fats, target: macroFatsTarget },
+        fiber: { consumed: fiber, target: macroFiberTarget },
       },
       hydration: { consumedMl: 0, targetMl: 2000 }, // TODO: implement hydration logging
       weightHistory,

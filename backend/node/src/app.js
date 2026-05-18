@@ -18,6 +18,7 @@ import dietPlanRoutes from './routes/dietPlans.routes.js';
 import recipeRoutes from './routes/recipes.routes.js';
 import notificationRoutes from './routes/notifications.routes.js';
 import subscriptionRoutes from './routes/subscriptions.routes.js';
+import chatRoutes from './routes/chats.routes.js'; // <-- Added chat routes for conversation history
 
 const app = express();
 
@@ -60,6 +61,7 @@ app.use('/api/diet-plans',    dietPlanRoutes);
 app.use('/api/recipes',       recipeRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/subscription',  subscriptionRoutes);
+app.use('/api/chats',         chatRoutes); // <-- Added chat routes for conversation history
 
 // ── AI Proxy: Forward /api/ai/* → FastAPI :8000 ───────────
 // This covers: /chat, /ai/generate-plan, /ai/analyze-photo

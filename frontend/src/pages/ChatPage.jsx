@@ -1,96 +1,141 @@
 // ChatPage.jsx — real-time AI nutrition chat.
-// Messages are sent to the FastAPI AI service (port 8000) at POST /api/chat/stream.
-// The response is an SSE stream: each chunk is either a text delta, a recipe_card
-// structured event, or a final "done" event.
-// User context (goal, diet, calories) is read from Redux and forwarded to the AI
-// so it can personalise its responses.
+//
+// Flow:
+//   Mount             → GET /api/chats → populate sidebar with persisted chats
+//   First message     → POST /api/chats (create chat + get threadId) → then stream
+//   Subsequent msgs   → POST /api/chats/:id/messages/stream (same chatId)
+//   Click sidebar     → GET /api/chats/:id/messages → restore history
+//   New Chat button   → clears active chat; next message auto-creates a new one
+//
+// Streaming uses raw fetch (SSE) with the JWT from sessionStorage.
+// User context is NOT sent from the frontend — Node.js reads it from req.user.
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSelector } from 'react-redux'
 import { AiMessage, UserMessage, RecipeCard } from '../components/ChatBubble'
 import { selectUser } from '../store/slices/authSlice'
+import { fetchAPI } from '../utils/apiCalls'
 import { API, CHAT } from '../constants/appConstants'
 
 export default function ChatPage() {
   const user = useSelector(selectUser)
 
-  const [input,     setInput]     = useState('')
-  const [streaming, setStreaming] = useState(false) // true while a response is in flight
-  const [messages,  setMessages]  = useState([
+  const [chats,        setChats]        = useState([])   // sidebar list from GET /api/chats
+  const [activeChatId, setActiveChatId] = useState(null) // currently open chat _id
+  const [messages,     setMessages]     = useState([     // messages rendered in the canvas
     { id: 0, type: 'ai', text: CHAT.WELCOME_MESSAGE, streaming: false },
   ])
+  const [input,        setInput]        = useState('')
+  const [streaming,    setStreaming]    = useState(false)
+  const [loadingChats, setLoadingChats] = useState(false)
+  const [loadingMsgs,  setLoadingMsgs]  = useState(false)
 
-  // Sidebar chat groups — tracks titles of this session's conversations
-  const [sessionChats, setSessionChats] = useState([])
+  const bottomRef  = useRef(null)
+  const inputRef   = useRef(null)
 
-  // Ref used to auto-scroll the message list to the latest message
-  const bottomRef = useRef(null)
-
-  // Auto-scroll whenever messages change
+  // Auto-scroll on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // ── Send a message and stream the AI response ──────────────
-  const sendMessage = async (text = input.trim()) => {
+  // Load sidebar on mount
+  useEffect(() => {
+    loadChats()
+  }, [])
+
+  // ── Load sidebar list ──────────────────────────────────────
+  const loadChats = async () => {
+    setLoadingChats(true)
+    const res = await fetchAPI('/chats', 'GET')
+    if (res.status === 'success') setChats(res.data.chats)
+    setLoadingChats(false)
+  }
+
+  // ── Click a past chat in sidebar ───────────────────────────
+  const handleSelectChat = async (chatId) => {
+    if (chatId === activeChatId || streaming) return
+    setActiveChatId(chatId)
+    setLoadingMsgs(true)
+    setMessages([])
+
+    const res = await fetchAPI(`/chats/${chatId}/messages`, 'GET')
+    if (res.status === 'success') {
+      const mapped = res.data.messages.map(m => ({
+        id:        m._id,
+        type:      m.role === 'user' ? 'user' : 'ai',
+        text:      m.content,
+        streaming: false,
+      }))
+      setMessages(mapped.length > 0 ? mapped : [
+        { id: 0, type: 'ai', text: CHAT.WELCOME_MESSAGE, streaming: false },
+      ])
+    }
+    setLoadingMsgs(false)
+    inputRef.current?.focus()
+  }
+
+  // ── New chat button ────────────────────────────────────────
+  const handleNewChat = () => {
+    if (streaming) return
+    setActiveChatId(null)
+    setMessages([{ id: 0, type: 'ai', text: CHAT.WELCOME_MESSAGE, streaming: false }])
+    setInput('')
+    inputRef.current?.focus()
+  }
+
+  // ── Send message ───────────────────────────────────────────
+  const sendMessage = useCallback(async (text = input.trim()) => {
     if (!text || streaming) return
 
     const userMsgId = Date.now()
     const aiMsgId   = userMsgId + 1
 
-    // Add user bubble + placeholder AI bubble (will fill with streamed tokens)
     setMessages(prev => [
       ...prev,
-      { id: userMsgId, type: 'user', text },
-      { id: aiMsgId,   type: 'ai',   text: '', streaming: true },
+      { id: userMsgId, type: 'user',  text, streaming: false },
+      { id: aiMsgId,   type: 'ai',    text: '', streaming: true },
     ])
     setInput('')
     setStreaming(true)
 
-    // Track conversation title from the first user message
-    if (messages.length === 1) {
-      setSessionChats(prev => [{ label: text.slice(0, 40), ts: 'Just now' }, ...prev])
-    }
-
-    // Build history from existing messages (exclude the new placeholder AI message)
-    const history = messages
-      .filter(m => m.type !== 'recipe' && !m.streaming && m.text)
-      .map(m => ({
-        role:    m.type === 'user' ? 'user' : 'ai',
-        content: m.text,
-      }))
-
-    // User context forwarded to the AI for personalised responses
-    const userContext = user?.preferences
-      ? {
-          primaryGoal:        user.preferences.primaryGoal,
-          dietaryRestriction: user.preferences.dietaryRestriction,
-          dailyCalorieTarget: user.preferences.dailyCalorieTarget,
-        }
-      : null
-
     try {
-      const res = await fetch(`${API.AI_SERVICE_URL}/api/chat/stream`, {
+      // If no active chat, create one first
+      let chatId = activeChatId
+      if (!chatId) {
+        const createRes = await fetchAPI('/chats', 'POST', { title: 'New Chat' })
+        if (createRes.status !== 'created' && createRes.status !== 'success') {
+          throw new Error('Failed to create chat session.')
+        }
+        chatId = createRes.data.chat._id
+        setActiveChatId(chatId)
+        // Prepend to sidebar immediately
+        setChats(prev => [createRes.data.chat, ...prev])
+      }
+
+      // Stream: raw fetch with JWT (Axios doesn't support SSE streaming)
+      const token = sessionStorage.getItem('token')
+      const res = await fetch(`${API.NODE_BASE_URL}/chats/${chatId}/messages/stream`, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history, user_context: userContext }),
+        headers: {
+          'Content-Type':  'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: JSON.stringify({ content: text }),
       })
 
-      if (!res.ok) throw new Error(`AI service error: ${res.status}`)
+      if (!res.ok) throw new Error(`Stream request failed: ${res.status}`)
 
       const reader  = res.body.getReader()
       const decoder = new TextDecoder()
-      let buffer = ''
+      let   buffer  = ''
 
-      // Read the stream chunk by chunk
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
         buffer += decoder.decode(value, { stream: true })
-        // SSE events are separated by double newlines
         const parts = buffer.split('\n\n')
-        buffer = parts.pop() // hold the incomplete trailing part
+        buffer = parts.pop() // keep incomplete trailing part
 
         for (const part of parts) {
           if (!part.startsWith('data: ')) continue
@@ -98,83 +143,85 @@ export default function ChatPage() {
             const event = JSON.parse(part.slice(6))
 
             if (event.delta) {
-              // Append streaming token to the placeholder AI message
               setMessages(prev => prev.map(m =>
                 m.id === aiMsgId ? { ...m, text: m.text + event.delta } : m
               ))
-
             } else if (event.type === 'recipe_card') {
-              // Insert a structured recipe card message after the AI text bubble
               setMessages(prev => [
                 ...prev,
                 { id: Date.now(), type: 'recipe', recipe: event.data },
               ])
-
             } else if (event.done) {
-              // Stream complete — replace streaming text with the clean full message
               setMessages(prev => prev.map(m =>
                 m.id === aiMsgId
                   ? { ...m, text: event.fullMessage || m.text, streaming: false }
                   : m
               ))
+              // Refresh sidebar so the title updates after the first message
+              loadChats()
             } else if (event.error) {
               setMessages(prev => prev.map(m =>
-                m.id === aiMsgId
-                  ? { ...m, text: `Error: ${event.error}`, streaming: false }
-                  : m
+                m.id === aiMsgId ? { ...m, text: `Error: ${event.error}`, streaming: false } : m
               ))
             }
-          } catch {
-            // Ignore malformed SSE frames
-          }
+          } catch { /* malformed SSE frame — skip */ }
         }
       }
     } catch (err) {
-      // Network error or AI service down — show fallback message
       setMessages(prev => prev.map(m =>
         m.id === aiMsgId
-          ? { ...m, text: 'Sorry, I couldn\'t reach the AI service. Please make sure the backend is running and try again.', streaming: false }
+          ? { ...m, text: 'Sorry, something went wrong. Please check the backend is running and try again.', streaming: false }
           : m
       ))
     } finally {
       setStreaming(false)
     }
-  }
+  }, [input, streaming, activeChatId])
 
   return (
     <div className="pt-20 flex h-screen overflow-hidden max-w-7xl mx-auto w-full px-4 gap-6 pb-20 md:pb-0">
 
-      {/* ── Sidebar — recent chats in this session ── */}
+      {/* ── Sidebar ── */}
       <aside className="hidden lg:flex flex-col w-72 bg-surface-container-low rounded-lg p-6 h-[calc(100vh-6rem)] my-4 flex-shrink-0">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="font-headline text-xl font-bold">Recent Curations</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-headline text-xl font-bold">Recent Chats</h2>
           <button
-            onClick={() => {
-              // Start a new chat — reset messages to the welcome message only
-              setMessages([{ id: 0, type: 'ai', text: CHAT.WELCOME_MESSAGE, streaming: false }])
-              setInput('')
-            }}
-            className="material-symbols-outlined text-primary hover:text-primary/80 transition-colors"
+            onClick={handleNewChat}
+            disabled={streaming}
+            className="material-symbols-outlined text-primary hover:text-primary/80 disabled:opacity-40 transition-colors"
             title="New chat"
           >
             edit_square
           </button>
         </div>
-        <div className="space-y-2 overflow-y-auto no-scrollbar flex-1">
-          {sessionChats.length > 0 ? (
-            sessionChats.map((chat, i) => (
-              <div
-                key={i}
-                className="p-4 rounded-xl cursor-pointer bg-surface-container-low hover:bg-surface-container-high transition-all"
+
+        <div className="space-y-1.5 overflow-y-auto no-scrollbar flex-1">
+          {loadingChats ? (
+            <div className="space-y-2 animate-pulse">
+              {[1,2,3].map(i => <div key={i} className="h-14 bg-surface-container rounded-xl" />)}
+            </div>
+          ) : chats.length > 0 ? (
+            chats.map(chat => (
+              <button
+                key={chat._id}
+                onClick={() => handleSelectChat(chat._id)}
+                className={`w-full text-left p-3 rounded-xl transition-all ${
+                  activeChatId === chat._id
+                    ? 'bg-primary/10 text-primary'
+                    : 'hover:bg-surface-container-high text-on-surface'
+                }`}
               >
-                <p className="text-sm font-semibold text-on-surface truncate">{chat.label}</p>
-                <p className="text-xs text-outline mt-0.5">{chat.ts}</p>
-              </div>
+                <p className="text-sm font-semibold truncate">{chat.title}</p>
+                <p className="text-[10px] text-outline mt-0.5">
+                  {new Date(chat.lastMessageAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </p>
+              </button>
             ))
           ) : (
-            <p className="text-xs text-outline px-3">No chats yet. Start a conversation!</p>
+            <p className="text-xs text-outline px-1">No chats yet. Start a conversation!</p>
           )}
         </div>
+
         <div className="mt-4 pt-4 border-t border-outline-variant/20">
           <div className="flex items-center gap-3 p-3 bg-primary-container/10 rounded-2xl">
             <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center">
@@ -193,7 +240,7 @@ export default function ChatPage() {
       {/* ── Chat canvas ── */}
       <section className="flex-1 flex flex-col bg-surface-container-lowest rounded-lg shadow-ambient my-4 overflow-hidden">
 
-        {/* Chat header */}
+        {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-sm border-b border-surface-container-low z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full primary-gradient flex items-center justify-center shadow-primary-sm">
@@ -210,8 +257,14 @@ export default function ChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button className="p-2 text-outline hover:text-primary transition-colors rounded-full hover:bg-surface-container">
-              <span className="material-symbols-outlined">share</span>
+            {/* Mobile: new chat */}
+            <button
+              onClick={handleNewChat}
+              disabled={streaming}
+              className="lg:hidden p-2 text-outline hover:text-primary transition-colors rounded-full hover:bg-surface-container disabled:opacity-40"
+              title="New chat"
+            >
+              <span className="material-symbols-outlined">edit_square</span>
             </button>
             <button className="p-2 text-outline hover:text-primary transition-colors rounded-full hover:bg-surface-container">
               <span className="material-symbols-outlined">more_vert</span>
@@ -221,29 +274,34 @@ export default function ChatPage() {
 
         {/* Message list */}
         <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 no-scrollbar">
-          {messages.map((msg) => {
-            if (msg.type === 'user') {
-              return <UserMessage key={msg.id}>{msg.text}</UserMessage>
-            }
-            if (msg.type === 'recipe') {
-              return <RecipeCard key={msg.id} {...msg.recipe} />
-            }
-            // AI message — show typing dots while streaming with no text yet
-            return (
-              <AiMessage key={msg.id}>
-                {msg.text || (msg.streaming ? (
-                  <span className="flex gap-1 items-center h-5">
-                    <span className="w-2 h-2 bg-outline/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-outline/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-outline/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </span>
-                ) : '')}
-              </AiMessage>
-            )
-          })}
+          {loadingMsgs ? (
+            <div className="space-y-4 animate-pulse">
+              {[1,2,3].map(i => (
+                <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`h-10 rounded-2xl bg-surface-container ${i % 2 === 0 ? 'w-48' : 'w-64'}`} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            messages.map((msg) => {
+              if (msg.type === 'user') return <UserMessage key={msg.id}>{msg.text}</UserMessage>
+              if (msg.type === 'recipe') return <RecipeCard key={msg.id} {...msg.recipe} />
+              return (
+                <AiMessage key={msg.id}>
+                  {msg.text || (msg.streaming ? (
+                    <span className="flex gap-1 items-center h-5">
+                      <span className="w-2 h-2 bg-outline/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 bg-outline/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 bg-outline/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </span>
+                  ) : '')}
+                </AiMessage>
+              )
+            })
+          )}
 
-          {/* Suggestion chips — only shown before user sends first message */}
-          {messages.length === 1 && (
+          {/* Suggestion chips — only before first user message */}
+          {messages.length === 1 && !loadingMsgs && (
             <div className="pt-8 border-t border-surface-variant/20">
               <p className="text-center text-[10px] font-bold uppercase tracking-widest text-outline mb-4">
                 Suggested Curations
@@ -266,7 +324,6 @@ export default function ChatPage() {
             </div>
           )}
 
-          {/* Invisible anchor for auto-scroll */}
           <div ref={bottomRef} />
         </div>
 
@@ -277,6 +334,7 @@ export default function ChatPage() {
               <span className="material-symbols-outlined">add_circle</span>
             </button>
             <input
+              ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}

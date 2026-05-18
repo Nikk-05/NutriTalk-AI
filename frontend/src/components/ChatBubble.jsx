@@ -7,7 +7,7 @@
 // Returns an array of strings and React <strong>/<em> elements.
 function parseInline(str) {
   const parts = []
-  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g
+  const regex = /(\*\*(.+?)\*\*\*?|\*(.+?)\*)/g
   let last = 0
   let match
 
