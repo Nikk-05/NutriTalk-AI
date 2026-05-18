@@ -7,9 +7,8 @@ class ChatMessage(BaseModel):
     content: str
 
 class ChatRequest(BaseModel):
-    session_id: Optional[str] = None
+    thread_id: str
     message: str
-    history: Optional[List[ChatMessage]] = []
     user_context: Optional[dict] = None  # user prefs for personalisation
 
 # ── Diet Plan ──────────────────────────────────────────────────
