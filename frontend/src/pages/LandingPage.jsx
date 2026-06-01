@@ -45,7 +45,7 @@ export default function LandingPage() {
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface-container-high rounded-full mb-8">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               <span className="text-[0.75rem] font-label uppercase tracking-widest font-bold text-primary">
-                New: GPT-4o Powered Nutrition
+                New: Gemini-2.5 Powered Nutrition
               </span>
             </div>
             <h1 className="text-[3rem] md:text-[4rem] lg:text-[4.5rem] leading-[1.08] font-headline font-black tracking-tight text-on-surface mb-8">

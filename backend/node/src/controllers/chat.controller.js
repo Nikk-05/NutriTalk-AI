@@ -80,6 +80,8 @@ const sendMessage = async (req, res, next) => {
     const aiResponse = await axios.post(`${AI_URL}/api/chat/message`, {
       thread_id: chat.threadId,
       message: content,
+      user_id: req.user._id.toString(),
+      chat_id: chat._id.toString(),
       user_context: {
         primaryGoal:        req.user.preferences?.primaryGoal,
         dietaryRestriction: req.user.preferences?.dietaryRestriction,
@@ -139,7 +141,13 @@ const streamMessage = async (req, res, next) => {
     // 4. Forward to FastAPI with responseType: 'stream' so axios gives us the raw stream
     const aiRes = await axios.post(
       `${AI_URL}/api/chat/stream`,
-      { thread_id: chat.threadId, message: content, user_context: userContext },
+      {
+        thread_id: chat.threadId,
+        message: content,
+        user_id: req.user._id.toString(),
+        chat_id: chat._id.toString(),
+        user_context: userContext,
+      },
       { responseType: 'stream' }
     );
 

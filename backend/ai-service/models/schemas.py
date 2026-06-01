@@ -10,6 +10,8 @@ class ChatRequest(BaseModel):
     thread_id: str
     message: str
     user_context: Optional[dict] = None  # user prefs for personalisation
+    user_id: Optional[str] = None        # MongoDB user._id — required for cross-session memory
+    chat_id: Optional[str] = None        # MongoDB chat._id — provenance for saved memories
 
 # ── Diet Plan ──────────────────────────────────────────────────
 class DietPlanRequest(BaseModel):
