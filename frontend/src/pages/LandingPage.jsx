@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import GlassCard from '../components/GlassCard'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
+import { selectIsLoggedIn } from '../store/slices/authSlice'
 
 const testimonials = [
   {
@@ -31,6 +33,13 @@ const avatarUrls = [
 ]
 
 export default function LandingPage() {
+  // CTAs on the landing page point at real app pages for signed-in users and
+  // funnel visitors into signup instead of dropping them onto a gated page.
+  const loggedIn = useSelector(selectIsLoggedIn)
+  const startPath = loggedIn ? '/dashboard'  : '/signup'
+  const chatPath  = loggedIn ? '/chat'       : '/signup'
+  const planPath  = loggedIn ? '/diet-plan'  : '/signup'
+
   return (
     <div className="overflow-x-hidden">
       {/* ── Hero Section ────────────────────────────────────────── */}
@@ -45,7 +54,7 @@ export default function LandingPage() {
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface-container-high rounded-full mb-8">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               <span className="text-[0.75rem] font-label uppercase tracking-widest font-bold text-primary">
-                New: GPT-4o Powered Nutrition
+                New: Gemini-2.5 Powered Nutrition
               </span>
             </div>
             <h1 className="text-[3rem] md:text-[4rem] lg:text-[4.5rem] leading-[1.08] font-headline font-black tracking-tight text-on-surface mb-8">
@@ -56,12 +65,12 @@ export default function LandingPage() {
               track metrics, and answer your health questions instantly.
             </p>
             <div className="flex flex-wrap gap-4 mb-12">
-              <Link to="/signup">
+              <Link to={startPath}>
                 <Button variant="primary" className="px-8 py-4 text-lg shadow-primary">
-                  Start Your Plan
+                  {loggedIn ? 'Go to Dashboard' : 'Start Your Plan'}
                 </Button>
               </Link>
-              <Link to="/chat">
+              <Link to={chatPath}>
                 <Button variant="secondary" className="px-8 py-4 text-lg">
                   Chat with AI
                 </Button>
@@ -144,7 +153,7 @@ export default function LandingPage() {
                   Hyper-personalized meal sequences that adapt to your pantry, allergies, and metabolic goals in real-time.
                 </p>
               </div>
-              <Link to="/diet-plan" className="mt-12 flex items-center gap-2 text-primary font-headline font-bold group/link">
+              <Link to={planPath} className="mt-12 flex items-center gap-2 text-primary font-headline font-bold group/link">
                 <span>Explore Planning</span>
                 <span className="material-symbols-outlined group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
               </Link>
@@ -224,9 +233,9 @@ export default function LandingPage() {
           <p className="text-lg text-on-surface-variant mb-10">
             Join thousands who've transformed their relationship with food using AI.
           </p>
-          <Link to="/signup">
+          <Link to={startPath}>
             <Button variant="primary" className="px-12 py-4 text-lg shadow-primary">
-              Get Started Free
+              {loggedIn ? 'Go to Dashboard' : 'Get Started Free'}
             </Button>
           </Link>
         </div>

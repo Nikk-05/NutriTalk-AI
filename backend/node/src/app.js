@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { createProxyMiddleware } from 'http-proxy-middleware';
@@ -19,6 +18,7 @@ import recipeRoutes from './routes/recipes.routes.js';
 import notificationRoutes from './routes/notifications.routes.js';
 import subscriptionRoutes from './routes/subscriptions.routes.js';
 import chatRoutes from './routes/chats.routes.js'; // <-- Added chat routes for conversation history
+import memoriesRoutes from './routes/memories.routes.js';
 
 const app = express();
 
@@ -35,7 +35,6 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // parse httpOnly cookies — required for req.cookies.refreshToken
-app.use(morgan('dev'));
 
 // ── Global Rate Limiter ────────────────────────────────────
 const globalLimiter = rateLimit({
@@ -62,6 +61,7 @@ app.use('/api/recipes',       recipeRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/subscription',  subscriptionRoutes);
 app.use('/api/chats',         chatRoutes); // <-- Added chat routes for conversation history
+app.use('/api/memories',      memoriesRoutes);
 
 // ── AI Proxy: Forward /api/ai/* → FastAPI :8000 ───────────
 // This covers: /chat, /ai/generate-plan, /ai/analyze-photo
@@ -71,7 +71,6 @@ app.use('/api/ai', createProxyMiddleware({
   pathRewrite: { '^/api/ai': '/api' }, // /api/ai/chat → /api/chat
   on: {
     error: (err, req, res) => {
-      console.error('[AI Proxy Error]', err.message);
       res.status(502).json({
         error: { code: 'AI_SERVICE_UNAVAILABLE', message: 'AI service is temporarily unavailable.' }
       });

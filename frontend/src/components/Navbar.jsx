@@ -3,6 +3,8 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { auth, fetchAPI } from '../utils/apiCalls.js'
 import { clearCredentials, selectIsLoggedIn, selectUser } from '../store/slices/authSlice'
+import { clearDashboard } from '../store/slices/dashboardSlice'
+import { clearDietPlan } from '../store/slices/dietPlanSlice'
 import { NAV_LINKS } from '../constants/appConstants'
 
 export default function Navbar() {
@@ -27,9 +29,12 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try { await fetchAPI('/auth/logout', 'POST', {}) } catch { /* ignore */ }
-    // Clear sessionStorage and wipe Redux auth state
+    // Clear sessionStorage and wipe all per-user Redux slices. Without this
+    // the next user to sign in would briefly see the previous user's data.
     auth.logout()
     dispatch(clearCredentials())
+    dispatch(clearDashboard())
+    dispatch(clearDietPlan())
     setProfileOpen(false)
     setMenuOpen(false)
     navigate('/login')
@@ -40,8 +45,9 @@ export default function Navbar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       <nav className="glass-nav max-w-7xl mx-auto flex items-center justify-between px-6 py-4 shadow-ambient-sm">
-        {/* Logo */}
-        <Link to="/" className="text-2xl font-black font-headline tracking-tight text-primary">
+        {/* Logo — points at the user's "home". For visitors that's the marketing
+            landing page; for signed-in users it's their dashboard. */}
+        <Link to={loggedIn ? '/dashboard' : '/'} className="text-2xl font-black font-headline tracking-tight text-primary">
           NutriTalk AI
         </Link>
 

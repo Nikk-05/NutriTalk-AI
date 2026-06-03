@@ -26,7 +26,13 @@ async def chat_stream_endpoint(request: ChatRequest):
         recipe_emitted = False
 
         try:
-            async for token in stream_chat(thread_id=request.thread_id, new_message=request.message, user_context=request.user_context):
+            async for token in stream_chat(
+                thread_id=request.thread_id,
+                new_message=request.message,
+                user_context=request.user_context,
+                user_id=request.user_id,
+                chat_id=request.chat_id,
+            ):
                 full_text += token
 
                 # When the full <recipe>...</recipe> block is accumulated, emit card and replace inline
@@ -78,6 +84,12 @@ async def chat_non_stream(request: ChatRequest):
     Non-streaming fallback for environments that don't support SSE.
     Returns the full AI response at once.
     """
-    full_response = run_chat(thread_id = request.thread_id, new_message = request.message, user_context = request.user_context)
+    full_response = run_chat(
+        thread_id=request.thread_id,
+        new_message=request.message,
+        user_context=request.user_context,
+        user_id=request.user_id,
+        chat_id=request.chat_id,
+    )
 
     return {"data": {"message": full_response, "role": "ai"}}

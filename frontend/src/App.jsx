@@ -3,6 +3,7 @@ import AppLayout from './layouts/AppLayout'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import ProtectedRoute from './components/ProtectedRoute'
 import { lazy, Suspense } from 'react'
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'))
@@ -21,14 +22,15 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
-          {/* App pages — wrapped in shared layout */}
+          {/* App pages — wrapped in shared layout. Landing is public; the
+              rest require a logged-in session and redirect to /login if not. */}
           <Route element={<AppLayout />}>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/chat" element={<ChatPage />} />
-            <Route path="/diet-plan" element={<DietPlanPage />} />
-            <Route path="/upgrade" element={<UpgradePage />} />
-            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path="/chat"      element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+            <Route path="/diet-plan" element={<ProtectedRoute><DietPlanPage /></ProtectedRoute>} />
+            <Route path="/upgrade"   element={<ProtectedRoute><UpgradePage /></ProtectedRoute>} />
+            <Route path="/profile"   element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           </Route>
 
           {/* Fallback */}

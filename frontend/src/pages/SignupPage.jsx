@@ -2,8 +2,11 @@ import { useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import Button from '../components/Button'
+import Stepper from '../components/Stepper'
 import { fetchAPI, auth } from '../utils/apiCalls.js'
 import { setCredentials } from '../store/slices/authSlice'
+import { clearDashboard } from '../store/slices/dashboardSlice'
+import { clearDietPlan } from '../store/slices/dietPlanSlice'
 import { GOALS, DIETS, GENDERS, ACTIVITY_LEVELS, DEFAULTS, RANGES } from '../constants/appConstants'
 import { calculateTDEE, getGoalCalories } from '../utils/tdee'
 
@@ -68,12 +71,16 @@ export default function SignupPage() {
         // Persist token + user to sessionStorage (Axios interceptor reads from here)
         auth.setToken(response.data.accessToken)
         auth.setUser(response.data.user)
+        // Wipe any stale per-user slices left over from a previous session
+        // before the new user's data starts loading in.
+        dispatch(clearDashboard())
+        dispatch(clearDietPlan())
         // Store user data in Redux so all components can access it reactively
         dispatch(setCredentials({ user: response.data.user, token: response.data.accessToken }))
         navigate('/dashboard')
       }
-    } catch (error) {
-      console.log(error)
+    } catch {
+      /* error is surfaced by fetchAPI's toast */
     } finally {
       setLoading(false)
     }
@@ -195,44 +202,24 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              {/* Height */}
-              <div>
-                <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">
-                  Height: <span className="text-primary">{form.heightCm} cm</span>
-                </label>
-                <input
-                  type="range" min={RANGES.height.min} max={RANGES.height.max} step={RANGES.height.step}
-                  value={form.heightCm}
-                  onChange={e => setForm(p => ({ ...p, heightCm: +e.target.value }))}
-                  className="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary"
-                />
-              </div>
-
-              {/* Current weight */}
-              <div>
-                <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">
-                  Current Weight: <span className="text-primary">{form.currentWeightKg} kg</span>
-                </label>
-                <input
-                  type="range" min={RANGES.weight.min} max={RANGES.weight.max} step={RANGES.weight.step}
-                  value={form.currentWeightKg}
-                  onChange={e => setForm(p => ({ ...p, currentWeightKg: +e.target.value }))}
-                  className="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary"
-                />
-              </div>
-
-              {/* Target weight */}
-              <div>
-                <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">
-                  Target Weight: <span className="text-primary">{form.targetWeightKg} kg</span>
-                </label>
-                <input
-                  type="range" min={RANGES.weight.min} max={RANGES.weight.max} step={RANGES.weight.step}
-                  value={form.targetWeightKg}
-                  onChange={e => setForm(p => ({ ...p, targetWeightKg: +e.target.value }))}
-                  className="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary"
-                />
-              </div>
+              <Stepper
+                label="Height" unit="cm"
+                min={RANGES.height.min} max={RANGES.height.max} step={RANGES.height.step}
+                value={form.heightCm}
+                onChange={v => setForm(p => ({ ...p, heightCm: v }))}
+              />
+              <Stepper
+                label="Current Weight" unit="kg"
+                min={RANGES.weight.min} max={RANGES.weight.max} step={RANGES.weight.step}
+                value={form.currentWeightKg}
+                onChange={v => setForm(p => ({ ...p, currentWeightKg: v }))}
+              />
+              <Stepper
+                label="Target Weight" unit="kg"
+                min={RANGES.weight.min} max={RANGES.weight.max} step={RANGES.weight.step}
+                value={form.targetWeightKg}
+                onChange={v => setForm(p => ({ ...p, targetWeightKg: v }))}
+              />
 
               {/* Activity level */}
               <div>
@@ -368,7 +355,7 @@ export default function SignupPage() {
               {loading ? (
                 <><span className="material-symbols-outlined animate-spin text-sm">refresh</span> Creating account...</>
               ) : step === steps.length - 1 ? (
-                <><span className="material-symbols-outlined text-sm">auto_awesome</span> Create My Plan</>
+                <><span className="material-symbols-outlined text-sm">auto_awesome</span> Signup </>
               ) : (
                 <>Continue <span className="material-symbols-outlined text-sm">arrow_forward</span></>
               )}

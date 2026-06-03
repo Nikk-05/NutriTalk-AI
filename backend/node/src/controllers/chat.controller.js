@@ -6,6 +6,24 @@ import { success, created, notFound, serverError } from '../utils/response.utils
 
 const AI_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
+// Shape the authenticated user record into the payload the AI service expects
+// as personalisation context. Everything here is already on req.user — no
+// extra DB hit. Keeping this in one place so both endpoints stay in sync.
+const buildUserContext = (user) => ({
+  name:               user.name,
+  age:                user.age,
+  gender:             user.gender,
+  primaryGoal:        user.preferences?.primaryGoal,
+  dietaryRestriction: user.preferences?.dietaryRestriction,
+  dailyCalorieTarget: user.preferences?.dailyCalorieTarget,
+  cuisinePreferences: user.preferences?.cuisinePreferences,
+  allergies:          user.preferences?.allergies,
+  heightCm:           user.metrics?.heightCm,
+  currentWeightKg:    user.metrics?.currentWeightKg,
+  targetWeightKg:     user.metrics?.targetWeightKg,
+  activityLevel:      user.metrics?.activityLevel,
+});
+
 // ── GET /chats ─────────────────────────────────────────────
 // List all chats for the logged-in user (newest first) for the sidebar.
 const getPastChats = async (req, res, next) => {
@@ -80,11 +98,9 @@ const sendMessage = async (req, res, next) => {
     const aiResponse = await axios.post(`${AI_URL}/api/chat/message`, {
       thread_id: chat.threadId,
       message: content,
-      user_context: {
-        primaryGoal:        req.user.preferences?.primaryGoal,
-        dietaryRestriction: req.user.preferences?.dietaryRestriction,
-        dailyCalorieTarget: req.user.preferences?.dailyCalorieTarget,
-      },
+      user_id: req.user._id.toString(),
+      chat_id: chat._id.toString(),
+      user_context: buildUserContext(req.user),
     });
 
     const assistantContent = aiResponse.data?.data?.message || aiResponse.data?.message;
@@ -123,11 +139,7 @@ const streamMessage = async (req, res, next) => {
     await Message.create({ chatId: chat._id, role: 'user', content });
 
     // 2. User context from the authenticated user record — not from the client
-    const userContext = {
-      primaryGoal:        req.user.preferences?.primaryGoal,
-      dietaryRestriction: req.user.preferences?.dietaryRestriction,
-      dailyCalorieTarget: req.user.preferences?.dailyCalorieTarget,
-    };
+    const userContext = buildUserContext(req.user);
 
     // 3. Set SSE headers before streaming begins
     res.setHeader('Content-Type', 'text/event-stream');
@@ -139,7 +151,13 @@ const streamMessage = async (req, res, next) => {
     // 4. Forward to FastAPI with responseType: 'stream' so axios gives us the raw stream
     const aiRes = await axios.post(
       `${AI_URL}/api/chat/stream`,
-      { thread_id: chat.threadId, message: content, user_context: userContext },
+      {
+        thread_id: chat.threadId,
+        message: content,
+        user_id: req.user._id.toString(),
+        chat_id: chat._id.toString(),
+        user_context: userContext,
+      },
       { responseType: 'stream' }
     );
 
@@ -171,9 +189,7 @@ const streamMessage = async (req, res, next) => {
           updates.title = content.slice(0, 50) + (content.length > 50 ? '…' : '');
         }
         await Chat.updateOne({ _id: chat._id }, updates);
-      } catch (saveErr) {
-        console.error('[Chat] Failed to persist assistant message:', saveErr.message);
-      }
+      } catch { /* persistence failure is non-fatal — message was already streamed */ }
       res.end();
     });
 

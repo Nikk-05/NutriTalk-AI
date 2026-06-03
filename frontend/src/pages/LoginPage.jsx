@@ -4,6 +4,8 @@ import { useDispatch } from 'react-redux'
 import Button from '../components/Button'
 import { fetchAPI, auth } from '../utils/apiCalls.js'
 import { setCredentials } from '../store/slices/authSlice'
+import { clearDashboard } from '../store/slices/dashboardSlice'
+import { clearDietPlan } from '../store/slices/dietPlanSlice'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -20,12 +22,16 @@ export default function LoginPage() {
         // Persist token + user to sessionStorage (Axios interceptor reads from here)
         auth.setToken(response.data.accessToken)
         auth.setUser(response.data.user)
+        // Wipe any stale per-user slices left over from a previous session
+        // before the new user's data starts loading in.
+        dispatch(clearDashboard())
+        dispatch(clearDietPlan())
         // Store user data in Redux so all components can access it reactively
         dispatch(setCredentials({ user: response.data.user, token: response.data.accessToken }))
         setTimeout(() => { navigate('/dashboard') }, 1000)
       }
-    }catch(error){
-      console.log(error)
+    }catch{
+      /* error surfaced by fetchAPI toast */
     }finally{
       setLoading(false)
     }

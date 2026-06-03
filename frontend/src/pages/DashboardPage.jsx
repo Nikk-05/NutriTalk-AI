@@ -119,7 +119,6 @@ export default function DashboardPage() {
     calories: m.calories,
     logged: m.logged,
     color: MEAL_COLOR[m.type?.toLowerCase()] ?? (i % 2 === 0 ? 'primary' : 'secondary'),
-    image: m.imageUrl || '',
   }))
 
   // ── Meal toggle handler — dispatches optimistic update ────
