@@ -42,41 +42,61 @@ _extractor_model = ChatGoogleGenerativeAI(
 # Phrases that signal the user just revealed a durable fact about themselves.
 # Tuned for nutrition/health domain. Keep this list short and biased toward
 # false positives — extractor will discard non-facts.
+# Phrases that signal a chat-discovered durable fact. Identity fields
+# (name, age, weight, etc.) are NOT here — they come from the profile.
 _TRIGGER_PATTERNS = re.compile(
-    r"\b(i am|i'm|i have|i don't|i do not|i can't|i cannot|i hate|i love|"
-    r"i prefer|i like|i dislike|allergic|allergy|intoler|vegan|vegetarian|"
-    r"pescatarian|keto|paleo|diabet|lactose|gluten|my goal|i want to|"
-    r"i'm trying|i need to|i avoid|never eat|always eat)\b",
+    r"\b(i hate|i love|i prefer|i like|i dislike|"
+    r"i don't|i do not|i can't|i cannot|i avoid|i refuse|"
+    r"never eat|always eat|"
+    r"i have (gerd|ibs|diabet|reflux|crohn|celiac)|"
+    r"i'm trying|i'm training|i want to|i need to|"
+    r"no oven|no microwave|no time to cook|"
+    r"remember that)\b",
     re.IGNORECASE,
 )
 
 
 def should_extract(user_message: str) -> bool:
     """Cheap filter: only run extraction when the message looks fact-bearing."""
-    if not user_message or len(user_message.strip()) < 15:
+    if not user_message or len(user_message.strip()) < 6:
         return False
-    if user_message.strip().endswith("?") and len(user_message) < 80:
+    if user_message.strip().endswith("?") and len(user_message) < 50:
         # Short questions almost never contain durable facts.
         return False
     return bool(_TRIGGER_PATTERNS.search(user_message))
 
 
 # ── Extraction prompt ──────────────────────────────────────────────
-_EXTRACTION_PROMPT = """You extract DURABLE user facts from a nutrition chat exchange.
+_EXTRACTION_PROMPT = """You extract DURABLE user facts from a chat exchange so the assistant can remember them in FUTURE conversations.
 
-Return a JSON array of facts the assistant should remember in FUTURE conversations.
-Each fact: {"content": "...", "category": "...", "confidence": 0.0-1.0}
+The user's account ALREADY stores these fields — DO NOT extract them, they are already known:
+- name, age, gender
+- primary goal, dietary restriction, daily calorie target
+- height, current weight, target weight, activity level
+- preferred cuisines, allergies
+
+Only extract DURABLE facts that the profile does NOT already capture. Examples of what TO save:
+- Specific food dislikes:     "Hates mushrooms"
+- Cooking constraints:        "No oven at home"
+- Eating habits:              "Skips breakfast on weekdays"
+- Custom sub-goals:           "Wants to run a 5K in August"
+- Lifestyle context:          "Cooks for two kids"
+- Health context not on file: "Has GERD", "Takes metformin"
 
 Categories: preference, allergy, dislike, goal, habit, health, other
 
-RULES:
-- Only durable facts (allergies, goals, dietary identity, strong dislikes, health conditions).
-- IGNORE ephemeral states ("I'm hungry", "I had a bad day", "today I ate X").
-- IGNORE general questions ("what should I eat?").
-- IGNORE the assistant's suggestions — only facts ABOUT the user.
-- Phrase facts in third person, terse: "Allergic to peanuts" not "I am allergic to peanuts".
-- Return [] if nothing durable was revealed.
+IGNORE:
+- Anything covered by the profile fields listed above.
+- Ephemeral states ("hungry today", "had a bad day").
+- General questions ("what should I eat?").
+- The assistant's suggestions — only facts ABOUT the user.
+
+FORMAT:
+- Third person, terse: "Hates mushrooms", "Has GERD", "No oven at home".
+- Return [] if nothing durable AND not-already-on-file was revealed.
 - Maximum 3 facts per exchange.
+
+Return ONLY a JSON array. Each fact: {"content": "...", "category": "...", "confidence": 0.0-1.0}
 
 Exchange:
 USER: {user_message}
@@ -118,8 +138,7 @@ def extract_memories(user_message: str, assistant_message: str) -> list[dict]:
             confidence = max(0.0, min(1.0, confidence))
             cleaned.append({"content": content, "category": category, "confidence": confidence})
         return cleaned
-    except Exception as e:
-        print(f"[memory] extraction failed: {e}")
+    except Exception:
         return []
 
 
@@ -193,8 +212,6 @@ async def extract_and_persist(user_id: str, chat_id: str, user_message: str, ass
             return
         facts = extract_memories(user_message, assistant_message)
         if facts:
-            saved = persist_memories(user_id, chat_id, facts)
-            if saved:
-                print(f"[memory] saved {saved} fact(s) for user {user_id}")
-    except Exception as e:
-        print(f"[memory] background task failed: {e}")
+            persist_memories(user_id, chat_id, facts)
+    except Exception:
+        pass

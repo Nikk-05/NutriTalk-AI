@@ -2,11 +2,15 @@
 // Import from here instead of scattering literals across pages and components.
 
 // ── API ─────────────────────────────────────────────────────
+// URLs come from Vite env vars at build time so the production bundle can
+// point at a real backend without code changes. Defaults are for local dev.
+// Set these in frontend/.env (or in Cloudflare Pages project settings) — see
+// frontend/.env.example for the canonical list.
 export const API = {
   /** Node.js backend base URL (no trailing slash) */
-  NODE_BASE_URL: 'http://localhost:3000/api',
+  NODE_BASE_URL:  import.meta.env.VITE_NODE_BASE_URL  || 'http://localhost:3000/api',
   /** FastAPI AI-service base URL (no trailing slash) */
-  AI_SERVICE_URL: 'http://localhost:8000',
+  AI_SERVICE_URL: import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000',
 }
 
 // ── Navigation ───────────────────────────────────────────────
@@ -74,9 +78,9 @@ export const DEFAULTS = {
 
 // ── Slider / input range bounds ──────────────────────────────
 export const RANGES = {
-  age:      { min: 13,   max: 100, step: 1  },
-  height:   { min: 120,  max: 220, step: 1  },
-  weight:   { min: 30,   max: 200, step: 1  },
+  age:      { min: 13,   max: 100, step: 1   },
+  height:   { min: 120,  max: 220, step: 0.5 },
+  weight:   { min: 30,   max: 200, step: 0.1 },
   calories: { min: 1200, max: 3200, step: 50 },
 }
 

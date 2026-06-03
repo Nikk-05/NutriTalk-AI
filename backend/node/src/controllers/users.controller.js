@@ -1,5 +1,24 @@
 import {User} from '../models/User.model.js';
+import { WeightHistory } from '../models/DietPlan.model.js';
 import { success, error } from '../utils/response.utils.js';
+
+const todayStr = () => new Date().toISOString().slice(0, 10);
+
+// Append a new weight entry, or overwrite the same-day entry if one exists.
+// Keeps the timeline one-per-day so the chart isn't noisy after a profile edit.
+async function recordWeight(userId, kg) {
+  if (!kg) return;
+  const today = todayStr();
+  const doc = await WeightHistory.findOne({ user: userId });
+  if (!doc) {
+    await WeightHistory.create({ user: userId, entries: [{ date: today, kg }] });
+    return;
+  }
+  const sameDay = doc.entries.find(e => e.date === today);
+  if (sameDay) sameDay.kg = kg;
+  else doc.entries.push({ date: today, kg });
+  await doc.save();
+}
 
 // ── GET /users/me ──────────────────────────────────────────
 const getProfile = (req, res) => success(res, { user: req.user });
@@ -10,8 +29,13 @@ const updateProfile = async (req, res, next) => {
     const allowed = ['name', 'metrics', 'notifications'];
     const updates = {};
     allowed.forEach(field => { if (req.body[field] !== undefined) updates[field] = req.body[field]; });
-
     const user = await User.findByIdAndUpdate(req.user._id, { $set: updates }, { new: true, runValidators: true });
+
+    // Mirror current weight into WeightHistory whenever the user changes it.
+    if (req.body.metrics?.currentWeightKg) {
+      await recordWeight(req.user._id, req.body.metrics.currentWeightKg);
+    }
+
     return success(res, { user });
   } catch (err) { next(err); }
 };

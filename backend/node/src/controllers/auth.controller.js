@@ -1,6 +1,27 @@
+import crypto from 'crypto';
 import {User} from '../models/User.model.js';
+import { WeightHistory } from '../models/DietPlan.model.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.utils.js';
 import { success, created, error, serverError } from '../utils/response.utils.js';
+
+// Today's date in the YYYY-MM-DD format the WeightHistory schema expects.
+const todayStr = () => new Date().toISOString().slice(0, 10);
+
+// Refresh cookie options. Cross-origin production setups (frontend on
+// app.foo.com, API on api.foo.com) need sameSite='none' + secure=true,
+// otherwise the browser silently drops the cookie. Local dev uses 'lax'
+// + secure=false so http://localhost works.
+const isProd = process.env.NODE_ENV === 'production';
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure:   isProd,
+  sameSite: isProd ? 'none' : 'lax',
+  maxAge:   7 * 24 * 60 * 60 * 1000,
+  // If you ever serve frontend + API from sibling subdomains, set
+  // COOKIE_DOMAIN='.your-domain.com' in env. Omitting it falls back to
+  // host-only, which is correct for single-domain setups.
+  ...(process.env.COOKIE_DOMAIN && { domain: process.env.COOKIE_DOMAIN }),
+};
 
 // ── TDEE computation (Mifflin-St Jeor) ────────────────────
 // Mirrors the frontend utils/tdee.js — backend is the source of truth on signup.
@@ -52,18 +73,23 @@ const signup = async (req, res, next) => {
       ...(metrics && { metrics }),
       preferences: finalPreferences,
     });
+
+    // Seed weight history with the signup weight so the dashboard chart isn't
+    // empty for new users. One entry, dated today.
+    if (metrics?.currentWeightKg) {
+      await WeightHistory.create({
+        user: user._id,
+        entries: [{ date: todayStr(), kg: metrics.currentWeightKg }],
+      });
+    }
+
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
     // Store refresh token
     user.refreshTokens.push(refreshToken);
     await user.save({ validateBeforeSave: false });
-    res.cookie('refreshToken', refreshToken,{
-      httpOnly:true,
-      secure: true,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('refreshToken', refreshToken, refreshCookieOptions);
 
     return created(res, { accessToken, user });
   } catch (err) { next(err); }
@@ -83,12 +109,7 @@ const login = async (req, res, next) => {
 
     user.refreshTokens.push(refreshToken);
     await user.save({ validateBeforeSave: false });
-    res.cookie('refreshToken', refreshToken,{
-      httpOnly:true,
-      secure: true,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('refreshToken', refreshToken, refreshCookieOptions);
 
     return success(res, { accessToken, user });
   } catch (err) { next(err); }
@@ -104,7 +125,13 @@ const logout = async (req, res, next) => {
         $pull: { refreshTokens: refreshToken }
       });
     }
-    res.clearCookie('refreshToken');
+    // Browser only clears the cookie if domain/sameSite/secure match what was set.
+    res.clearCookie('refreshToken', {
+      httpOnly: refreshCookieOptions.httpOnly,
+      secure:   refreshCookieOptions.secure,
+      sameSite: refreshCookieOptions.sameSite,
+      ...(refreshCookieOptions.domain && { domain: refreshCookieOptions.domain }),
+    });
     return success(res, { message: 'Logged out successfully.' });
   } catch (err) { next(err); }
 };
@@ -132,12 +159,7 @@ const refresh = async (req, res, next) => {
     user.refreshTokens.push(newRefreshToken);
     await user.save({ validateBeforeSave: false });
 
-    res.cookie('refreshToken', newRefreshToken,{
-      httpOnly:true,
-      secure: true,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('refreshToken', newRefreshToken, refreshCookieOptions);
 
     return success(res, { accessToken: newAccessToken});
   } catch (err) { next(err); }
@@ -155,14 +177,12 @@ const forgotPassword = async (req, res, next) => {
     // Always return 200 to avoid email enumeration
     if (!user) return success(res, { message: 'If that email exists, a reset link has been sent.' });
 
-    const token = require('crypto').randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(32).toString('hex');
     user.passwordResetToken = token;
     user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 min
     await user.save({ validateBeforeSave: false });
 
-    // TODO: send email via nodemailer
-    console.log('[DEV] Password reset token:', token);
-
+    // TODO: send email via nodemailer (token currently dead-ends in DB until the mailer is wired up)
     return success(res, { message: 'If that email exists, a reset link has been sent.' });
   } catch (err) { next(err); }
 };

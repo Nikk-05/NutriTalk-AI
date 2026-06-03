@@ -4,10 +4,8 @@ dotenv.config()
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, { dbName: 'Nutritalk_ai' });
-    console.log(`✅ MongoDB connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`❌ MongoDB connection error: ${error.message}`);
+    await mongoose.connect(process.env.MONGODB_URI, { dbName: 'Nutritalk_ai' });
+  } catch {
     process.exit(1);
   }
 };

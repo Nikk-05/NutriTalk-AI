@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Button from '../components/Button'
 import GlassCard from '../components/GlassCard'
+import Stepper from '../components/Stepper'
 import { auth, fetchAPI } from '../utils/apiCalls.js'
 import { GOALS, DIETS, GENDERS, ACTIVITY_LEVELS, DEFAULTS, RANGES } from '../constants/appConstants'
 
@@ -71,8 +72,8 @@ export default function ProfilePage() {
       }
       const prefsPayload = {
         primaryGoal: form.primaryGoal,
-        dailyCalorieTarget: Number(form.dailyCalorieTarget),
         dietaryRestriction: form.dietaryRestriction,
+        // dailyCalorieTarget is recomputed server-side from metrics + goal
       }
 
       const [profileRes, prefsRes] = await Promise.all([
@@ -159,23 +160,20 @@ export default function ProfilePage() {
         <GlassCard className="p-6">
           <h2 className="text-lg font-headline font-black text-on-surface mb-4">Body Metrics</h2>
           <div className="space-y-5">
-            <RangeField
-              label="Height"
-              unit="cm"
+            <Stepper
+              label="Height" unit="cm"
               min={RANGES.height.min} max={RANGES.height.max} step={RANGES.height.step}
               value={form.heightCm}
               onChange={v => setForm(p => ({ ...p, heightCm: v }))}
             />
-            <RangeField
-              label="Current Weight"
-              unit="kg"
+            <Stepper
+              label="Current Weight" unit="kg"
               min={RANGES.weight.min} max={RANGES.weight.max} step={RANGES.weight.step}
               value={form.currentWeightKg}
               onChange={v => setForm(p => ({ ...p, currentWeightKg: v }))}
             />
-            <RangeField
-              label="Target Weight"
-              unit="kg"
+            <Stepper
+              label="Target Weight" unit="kg"
               min={RANGES.weight.min} max={RANGES.weight.max} step={RANGES.weight.step}
               value={form.targetWeightKg}
               onChange={v => setForm(p => ({ ...p, targetWeightKg: v }))}
@@ -223,14 +221,14 @@ export default function ProfilePage() {
               </select>
             </Field>
           </div>
-          <div className="mt-5">
-            <RangeField
-              label="Daily Calorie Target"
-              unit="kcal"
-              min={RANGES.calories.min} max={RANGES.calories.max} step={RANGES.calories.step}
-              value={form.dailyCalorieTarget}
-              onChange={v => setForm(p => ({ ...p, dailyCalorieTarget: v }))}
-            />
+          <div className="mt-5 p-4 rounded-2xl bg-primary/5 border border-primary/15 flex items-center justify-between">
+            <div>
+              <p className="font-label text-xs font-bold uppercase tracking-widest text-outline">Daily Calorie Target</p>
+              <p className="text-[11px] text-on-surface-variant mt-0.5">Calculated from your metrics + goal (Mifflin-St Jeor)</p>
+            </div>
+            <p className="text-xl font-black text-primary font-headline">
+              {form.dailyCalorieTarget?.toLocaleString?.() ?? form.dailyCalorieTarget} kcal
+            </p>
           </div>
         </GlassCard>
 
@@ -269,18 +267,3 @@ function Field({ label, children }) {
   )
 }
 
-function RangeField({ label, unit, min, max, step, value, onChange }) {
-  return (
-    <div>
-      <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">
-        {label}: <span className="text-primary">{value} {unit}</span>
-      </label>
-      <input
-        type="range" min={min} max={max} step={step}
-        value={value}
-        onChange={e => onChange(+e.target.value)}
-        className="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary"
-      />
-    </div>
-  )
-}

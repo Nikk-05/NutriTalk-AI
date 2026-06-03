@@ -157,26 +157,59 @@ export default function ChatPage() {
                   ? { ...m, text: event.fullMessage || m.text, streaming: false }
                   : m
               ))
-              // Refresh sidebar so the title updates after the first message
-              loadChats()
             } else if (event.error) {
               setMessages(prev => prev.map(m =>
-                m.id === aiMsgId ? { ...m, text: `Error: ${event.error}`, streaming: false } : m
+                m.id === aiMsgId
+                  ? { ...m, text: event.error, streaming: false, error: true, retryPrompt: text }
+                  : m
               ))
             }
           } catch { /* malformed SSE frame — skip */ }
         }
       }
+
+      // Stream fully drained. Bubble the active chat to the top of the
+      // sidebar locally (snappy UX), then reconcile with the server so the
+      // first-message title rename also lands.
+      setChats(prev => {
+        const active = prev.find(c => c._id === chatId)
+        if (!active) return prev
+        return [
+          { ...active, lastMessageAt: new Date().toISOString() },
+          ...prev.filter(c => c._id !== chatId),
+        ]
+      })
+      loadChats()
     } catch (err) {
       setMessages(prev => prev.map(m =>
         m.id === aiMsgId
-          ? { ...m, text: 'Sorry, something went wrong. Please check the backend is running and try again.', streaming: false }
+          ? {
+              ...m,
+              text: 'Something went wrong. The AI service may be offline.',
+              streaming: false,
+              error: true,
+              retryPrompt: text,
+            }
           : m
       ))
     } finally {
       setStreaming(false)
     }
   }, [input, streaming, activeChatId])
+
+  // ── Retry a failed exchange ────────────────────────────────
+  // Strips the failed AI bubble AND the user bubble that produced it
+  // (always the message immediately before), then re-sends the same prompt.
+  const handleRetry = useCallback((aiMsgId, prompt) => {
+    if (streaming || !prompt) return
+    setMessages(prev => {
+      const idx = prev.findIndex(m => m.id === aiMsgId)
+      if (idx < 0) return prev
+      const userIdx = idx > 0 && prev[idx - 1].type === 'user' ? idx - 1 : idx
+      return prev.filter((_, i) => i !== idx && i !== userIdx)
+    })
+    sendMessage(prompt)
+  }, [streaming, sendMessage])
 
   return (
     <div className="pt-20 flex h-screen overflow-hidden max-w-7xl mx-auto w-full px-4 gap-6 pb-20 md:pb-0">
@@ -286,6 +319,31 @@ export default function ChatPage() {
             messages.map((msg) => {
               if (msg.type === 'user') return <UserMessage key={msg.id}>{msg.text}</UserMessage>
               if (msg.type === 'recipe') return <RecipeCard key={msg.id} {...msg.recipe} />
+
+              // Errored AI message — surface a Retry button below the text
+              if (msg.error) {
+                return (
+                  <div key={msg.id} className="flex gap-4 max-w-3xl">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-error/15 flex items-center justify-center text-error mt-1">
+                      <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
+                    </div>
+                    <div className="flex-1 max-w-2xl">
+                      <div className="bg-error/5 border border-error/20 px-5 py-3 rounded-2xl rounded-tl-none text-sm text-error leading-relaxed">
+                        {msg.text}
+                      </div>
+                      <button
+                        onClick={() => handleRetry(msg.id, msg.retryPrompt)}
+                        disabled={streaming || !msg.retryPrompt}
+                        className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-sm">refresh</span>
+                        Retry
+                      </button>
+                    </div>
+                  </div>
+                )
+              }
+
               return (
                 <AiMessage key={msg.id}>
                   {msg.text || (msg.streaming ? (
