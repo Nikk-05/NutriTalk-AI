@@ -14,10 +14,125 @@ export const API = {
 }
 
 // ── Navigation ───────────────────────────────────────────────
-export const NAV_LINKS = [
+// Shown to authenticated users — real protected routes.
+export const APP_NAV_LINKS = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/chat',      label: 'AI Chat'   },
   { to: '/diet-plan', label: 'Diet Plan' },
+]
+
+// Shown to visitors — anchor links into landing-page sections.
+// Each `to` is a hash anchor handled by the smooth-scroll logic in Navbar.
+export const MARKETING_NAV_LINKS = [
+  { to: '/#features',     label: 'Features'     },
+  { to: '/#how-it-works', label: 'How it Works' },
+  { to: '/#pricing',      label: 'Pricing'      },
+  { to: '/#faq',          label: 'FAQ'          },
+]
+
+// ── Motivational quotes (Daily Check-In modal) ──────────────
+export const MOTIVATIONAL_QUOTES = [
+  { text: 'Small daily improvements lead to stunning long-term results.', author: 'Robin Sharma' },
+  { text: 'Take care of your body. It’s the only place you have to live.', author: 'Jim Rohn' },
+  { text: 'The groundwork for all happiness is good health.', author: 'Leigh Hunt' },
+  { text: 'You don’t have to be extreme, just consistent.', author: '—' },
+  { text: 'Discipline is choosing between what you want now and what you want most.', author: 'Abraham Lincoln' },
+  { text: 'A healthy outside starts from the inside.', author: 'Robert Urich' },
+  { text: 'Your body hears everything your mind says.', author: 'Naomi Judd' },
+  { text: 'The only bad workout is the one that didn’t happen.', author: '—' },
+  { text: 'Strive for progress, not perfection.', author: '—' },
+  { text: 'Every meal is a chance to nourish your future self.', author: '—' },
+]
+
+// ── FAQ entries (Landing page FAQ section) ──────────────────
+export const FAQ_ITEMS = [
+  {
+    q: 'Is NutriTalk really free to start?',
+    a: 'Yes. The free tier gives you AI chat, basic diet planning and dashboard tracking. Upgrade only if you want advanced features like wearable integration or unlimited plan generations.',
+  },
+  {
+    q: 'How does the AI build my plan?',
+    a: 'We use Gemini 2.5 with your profile (age, weight, activity, goal, allergies and cuisine preferences) to generate a 7-day plan with macros. You can regenerate or tweak it any time.',
+  },
+  {
+    q: 'Do I need to log every meal?',
+    a: 'No. Your saved plan auto-seeds today’s meals on the dashboard. Just tick the ones you actually ate — calories and macros update instantly.',
+  },
+  {
+    q: 'Can I use NutriTalk with dietary restrictions?',
+    a: 'Yes. We support vegetarian, vegan, keto, paleo, Mediterranean and allergy-aware planning. Set them once in your profile and every plan respects them.',
+  },
+  {
+    q: 'Is my data private?',
+    a: 'Your data is stored securely and never sold. AI requests are processed for plan generation only — we don’t train models on your personal data.',
+  },
+]
+
+// ── Pricing tiers (Landing page pricing section) ────────────
+export const PRICING_TIERS = [
+  {
+    name: 'Free',
+    price: '$0',
+    cadence: '/ forever',
+    description: 'Everything you need to start.',
+    features: [
+      'AI chat (50 messages / day)',
+      '1 active diet plan',
+      'Calorie & macro tracking',
+      '7-day weight history',
+    ],
+    cta: 'Start Free',
+    highlighted: false,
+  },
+  {
+    name: 'Pro',
+    price: '$9',
+    cadence: '/ month',
+    description: 'For consistent trackers.',
+    features: [
+      'Unlimited AI chat',
+      'Unlimited plan regenerations',
+      '30-day weight history',
+      'Photo meal logging',
+      'Priority AI response',
+    ],
+    cta: 'Go Pro',
+    highlighted: true,
+  },
+  {
+    name: 'Elite',
+    price: '$24',
+    cadence: '/ month',
+    description: 'For serious athletes.',
+    features: [
+      'Everything in Pro',
+      'Wearable data integration',
+      'Custom macro targets',
+      '1-on-1 nutritionist chat',
+      'Advanced analytics',
+    ],
+    cta: 'Go Elite',
+    highlighted: false,
+  },
+]
+
+// ── "How it works" steps (Landing page) ─────────────────────
+export const HOW_IT_WORKS_STEPS = [
+  {
+    icon: 'person_add',
+    title: 'Tell us about you',
+    description: 'Share your goals, activity level, and dietary preferences in under 2 minutes.',
+  },
+  {
+    icon: 'auto_awesome',
+    title: 'AI builds your plan',
+    description: 'Gemini-powered planner generates a 7-day meal plan tailored to your TDEE and macros.',
+  },
+  {
+    icon: 'monitoring',
+    title: 'Track & adapt',
+    description: 'Tick what you ate, log your weight, and watch your progress unfold day by day.',
+  },
 ]
 
 // ── User option lists ────────────────────────────────────────

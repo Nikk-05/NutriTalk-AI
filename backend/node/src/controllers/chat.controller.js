@@ -202,10 +202,16 @@ const streamMessage = async (req, res, next) => {
     req.on('close', () => aiRes.data.destroy());
 
   } catch (err) {
-    if (err.response) {
-      res.write(`data: ${JSON.stringify({ error: 'AI service unavailable.' })}\n\n`);
+    // If we've already flushed SSE headers, we can't fall through to the JSON
+    // error handler — it would try to set Content-Type again and crash Node.
+    // Write an SSE error frame and close the stream instead.
+    if (res.headersSent) {
+      try {
+        res.write(`data: ${JSON.stringify({ error: 'AI service unavailable.' })}\n\n`);
+      } catch { /* socket already gone */ }
       return res.end();
     }
+    if (err.response) return serverError(res, 'AI service unavailable.');
     next(err);
   }
 };

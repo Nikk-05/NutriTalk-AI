@@ -9,6 +9,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import ProgressRing from '../components/ProgressRing'
 import ProgressBar from '../components/ProgressBar'
 import MealCard from '../components/MealCard'
+import DailyCheckInModal from '../components/DailyCheckInModal'
 import {
   fetchDashboardSummary,
   fetchWeightHistory,
@@ -128,6 +129,9 @@ export default function DashboardPage() {
 
   return (
     <div className="py-12 px-6 max-w-7xl mx-auto pb-32 md:pb-16">
+      {/* Daily check-in modal — self-gates via localStorage; renders nothing
+          once dismissed/saved for today. */}
+      <DailyCheckInModal />
 
       {/* ── Greeting ── personalised with user's first name and hydration progress */}
       <section className="mb-10">
@@ -143,16 +147,16 @@ export default function DashboardPage() {
 
       {/* ── Loading skeleton — shown while the first fetch is in flight ── */}
       {loading && !summary && (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 animate-pulse">
-          <div className="md:col-span-3 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-pulse">
+          <div className="lg:col-span-3 space-y-4">
             <div className="h-52 bg-surface-container rounded-lg" />
             <div className="h-32 bg-surface-container rounded-lg" />
           </div>
-          <div className="md:col-span-6 space-y-6">
+          <div className="lg:col-span-6 space-y-6">
             <div className="h-64 bg-surface-container rounded-lg" />
             <div className="h-52 bg-surface-container rounded-lg" />
           </div>
-          <div className="md:col-span-3 space-y-4">
+          <div className="lg:col-span-3 space-y-4">
             <div className="h-32 bg-surface-container rounded-lg" />
             <div className="h-28 bg-surface-container rounded-lg" />
             <div className="h-28 bg-surface-container rounded-lg" />
@@ -170,10 +174,10 @@ export default function DashboardPage() {
 
       {/* ── 12-col Bento Grid — rendered once summary is available ── */}
       {(!loading || summary) && (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* ── Left col (3): Quick Actions + Streak ── */}
-          <div className="md:col-span-3 space-y-4">
+          <div className="lg:col-span-3 space-y-4">
 
             {/* Quick actions — links to key flows */}
             <div className="bg-surface-container-lowest rounded-lg p-6 shadow-ambient">
@@ -224,7 +228,7 @@ export default function DashboardPage() {
           </div>
 
           {/* ── Center col (6): Calorie summary + Weight chart ── */}
-          <div className="md:col-span-6 space-y-6">
+          <div className="lg:col-span-6 space-y-6">
 
             {/* Calorie summary — ring + macro progress bars */}
             <div className="bg-surface-container-lowest rounded-lg p-8 shadow-ambient relative overflow-hidden">
@@ -242,7 +246,7 @@ export default function DashboardPage() {
                   <span className="block text-xs uppercase tracking-widest text-outline font-bold">Consumed</span>
                 </div>
               </div>
-              <div className="flex flex-col md:flex-row items-center gap-10">
+              <div className="flex flex-col xl:flex-row items-center gap-10">
                 {/* Progress ring shows consumed vs target, label shows remaining */}
                 <ProgressRing
                   value={consumed}
@@ -315,29 +319,71 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <>
-                  <div className="h-44 w-full flex items-end gap-2">
-                    {chartSlots.map((slot, i) => (
-                      <div
-                        key={slot.date}
-                        className={`flex-1 rounded-t-lg relative transition-all duration-500 ${i === todayIdx
-                            ? 'bg-primary-container'
-                            : slot.kg !== null
-                              ? 'bg-primary'
-                              : 'bg-surface-container-high'
-                          }`}
-                        style={{ height: `${barHeights[i] || 4}%` }}
-                      >
-                        {/* Tooltip with actual kg value for today's bar */}
-                        {i === todayIdx && slot.kg !== null && (
-                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface px-2 py-0.5 rounded text-[9px] font-bold whitespace-nowrap">
-                            {slot.kg}kg
+                  {/* Chart canvas — bars sit on top of a faint baseline grid */}
+                  <div className="relative h-44 w-full">
+                    {/* Faint horizontal gridlines for visual context */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                      {[0, 1, 2, 3].map(i => (
+                        <div key={i} className="h-px w-full bg-outline-variant/30" />
+                      ))}
+                    </div>
+
+                    {/* Fixed-width bars centered with even spacing — looks
+                        cleaner and more "chart"-like than full-flex bars. */}
+                    <div className="relative h-full w-full flex items-end justify-evenly px-1">
+                      {chartSlots.map((slot, i) => {
+                        const isToday = i === todayIdx
+                        const hasValue = slot.kg !== null
+                        const tooltipLabel = hasValue
+                          ? `${slot.kg}kg${isToday ? ' · Today' : ''}`
+                          : 'No entry'
+                        return (
+                          <div
+                            key={slot.date}
+                            className="group relative flex flex-col items-center justify-end h-full"
+                            style={{ width: '32px' }}
+                            aria-label={`${slot.date}: ${tooltipLabel}`}
+                          >
+                            <div
+                              className={`w-full rounded-t-md transition-all duration-500 ${
+                                isToday
+                                  ? 'bg-gradient-to-t from-primary-container to-primary'
+                                  : hasValue
+                                    ? 'bg-primary/80 group-hover:bg-primary'
+                                    : 'bg-surface-container-high group-hover:bg-surface-container-highest'
+                              }`}
+                              style={{ height: `${barHeights[i] || 4}%` }}
+                            />
+                            {/* Hover tooltip — today shows it permanently */}
+                            <div
+                              className={`absolute -top-7 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface px-2 py-1 rounded-md text-[10px] font-bold whitespace-nowrap pointer-events-none transition-opacity duration-200 shadow-ambient-sm ${
+                                isToday && hasValue ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                              }`}
+                            >
+                              {tooltipLabel}
+                            </div>
                           </div>
-                        )}
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Day labels + per-bar kg readouts under each column */}
+                  <div className="flex justify-evenly mt-3 px-1">
+                    {chartSlots.map((slot, i) => (
+                      <div key={slot.date} className="flex flex-col items-center" style={{ width: '32px' }}>
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-widest ${
+                            i === todayIdx ? 'text-primary' : 'text-outline'
+                          }`}
+                        >
+                          {chartLabels[i]}
+                        </span>
+                        <span className="text-[10px] font-body text-on-surface-variant mt-0.5">
+                          {slot.kg !== null ? `${slot.kg}` : '—'}
+                        </span>
                       </div>
                     ))}
-                  </div>
-                  <div className="flex justify-between mt-3 text-[10px] font-bold text-outline uppercase tracking-widest">
-                    {chartLabels.map((d, i) => <span key={i}>{d}</span>)}
                   </div>
                 </>
               )}
@@ -345,7 +391,7 @@ export default function DashboardPage() {
           </div>
 
           {/* ── Right col (3): Today's Meal Plan + Activity ── */}
-          <div className="md:col-span-3 space-y-4">
+          <div className="lg:col-span-3 space-y-4">
             <h3 className="font-headline font-bold text-xl tracking-tight">Today&apos;s Meal Plan</h3>
 
             {/* Meal cards — built from todaysMeals returned by the summary endpoint */}

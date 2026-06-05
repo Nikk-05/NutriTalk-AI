@@ -7,18 +7,31 @@ import { setCredentials } from '../store/slices/authSlice'
 import { clearDashboard } from '../store/slices/dashboardSlice'
 import { clearDietPlan } from '../store/slices/dietPlanSlice'
 
+// Maps backend error codes to friendly inline messages. Anything not listed
+// falls back to the server's `message` so generic errors still surface.
+const LOGIN_ERROR_MESSAGES = {
+  INVALID_CREDENTIALS: 'That email and password combination doesn\'t match our records. Please try again.',
+  USER_NOT_FOUND:      'No account found with this email. Want to sign up instead?',
+  EMAIL_NOT_VERIFIED:  'Please verify your email before signing in.',
+  RATE_LIMITED:        'Too many attempts. Please wait a minute before trying again.',
+}
+
 export default function LoginPage() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
+  // Inline error banner shown at the top of the form. Cleared when the user
+  // edits either field so stale errors don't linger after they correct input.
+  const [errorMsg, setErrorMsg] = useState(null)
 
-  const handleSubmit = async(e) => {
-    try{
-      e.preventDefault()
-      setLoading(true)
-      const response = await fetchAPI("/auth/login","POST", form)
-      if(response.status === 'success'){
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setErrorMsg(null)
+    try {
+      const response = await fetchAPI('/auth/login', 'POST', form)
+      if (response.status === 'success') {
         // Persist token + user to sessionStorage (Axios interceptor reads from here)
         auth.setToken(response.data.accessToken)
         auth.setUser(response.data.user)
@@ -29,12 +42,23 @@ export default function LoginPage() {
         // Store user data in Redux so all components can access it reactively
         dispatch(setCredentials({ user: response.data.user, token: response.data.accessToken }))
         setTimeout(() => { navigate('/dashboard') }, 1000)
+        return
       }
-    }catch{
-      /* error surfaced by fetchAPI toast */
-    }finally{
+      // Backend returned { status: 'error', error: { code, message, field? } }
+      const code = response.error?.code
+      const msg  = LOGIN_ERROR_MESSAGES[code] || response.error?.message || 'Something went wrong. Please try again.'
+      setErrorMsg(msg)
+    } catch {
+      setErrorMsg('Network error — please check your connection and try again.')
+    } finally {
       setLoading(false)
     }
+  }
+
+  // Clear stale errors as soon as the user starts fixing their input.
+  const updateField = (key) => (e) => {
+    setErrorMsg(null)
+    setForm(p => ({ ...p, [key]: e.target.value }))
   }
 
   return (
@@ -92,7 +116,29 @@ export default function LoginPage() {
             Sign in to continue your wellness journey.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            {/* Inline error banner — shown when the backend returns an error
+                envelope (bad credentials, rate limit, etc.) so the user sees
+                what went wrong instead of a silent no-op. */}
+            {errorMsg && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="flex items-start gap-3 px-4 py-3 rounded-2xl bg-error/10 border border-error/30 text-error"
+              >
+                <span className="material-symbols-outlined text-base mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
+                <p className="text-sm font-body leading-snug flex-1">{errorMsg}</p>
+                <button
+                  type="button"
+                  onClick={() => setErrorMsg(null)}
+                  aria-label="Dismiss error"
+                  className="opacity-60 hover:opacity-100 transition-opacity"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              </div>
+            )}
+
             {/* Email */}
             <div>
               <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">
@@ -104,9 +150,11 @@ export default function LoginPage() {
                   type="email"
                   required
                   value={form.email}
-                  onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                  onChange={updateField('email')}
                   placeholder="hello@nutritalk.ai"
-                  className="w-full pl-11 pr-4 py-4 bg-surface-container-high rounded-full border border-transparent focus:outline-none focus:border-primary/30 focus:bg-surface-container-lowest focus:shadow-ambient transition-all text-on-surface placeholder:text-outline/50 font-body"
+                  className={`w-full pl-11 pr-4 py-4 bg-surface-container-high rounded-full border focus:outline-none focus:bg-surface-container-lowest focus:shadow-ambient transition-all text-on-surface placeholder:text-outline/50 font-body ${
+                    errorMsg ? 'border-error/40 focus:border-error/60' : 'border-transparent focus:border-primary/30'
+                  }`}
                 />
               </div>
             </div>
@@ -122,9 +170,11 @@ export default function LoginPage() {
                   type="password"
                   required
                   value={form.password}
-                  onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                  onChange={updateField('password')}
                   placeholder="Your password"
-                  className="w-full pl-11 pr-4 py-4 bg-surface-container-high rounded-full border border-transparent focus:outline-none focus:border-primary/30 focus:bg-surface-container-lowest focus:shadow-ambient transition-all text-on-surface placeholder:text-outline/50 font-body"
+                  className={`w-full pl-11 pr-4 py-4 bg-surface-container-high rounded-full border focus:outline-none focus:bg-surface-container-lowest focus:shadow-ambient transition-all text-on-surface placeholder:text-outline/50 font-body ${
+                    errorMsg ? 'border-error/40 focus:border-error/60' : 'border-transparent focus:border-primary/30'
+                  }`}
                 />
               </div>
               <div className="text-right mt-2">

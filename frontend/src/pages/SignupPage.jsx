@@ -12,11 +12,39 @@ import { calculateTDEE, getGoalCalories } from '../utils/tdee'
 
 const steps = ['Your Info', 'Your Body', 'Your Goals', 'Your Diet']
 
+// Backend error code → friendly message map. Falls back to server `message`
+// when the code isn't listed so unexpected errors still reach the user.
+const SIGNUP_ERROR_MESSAGES = {
+  EMAIL_ALREADY_EXISTS:    'An account with this email already exists. Try signing in instead.',
+  INVALID_EMAIL:           'Please enter a valid email address.',
+  WEAK_PASSWORD:           'Password is too weak. Use at least 8 characters with a mix of letters and numbers.',
+  VALIDATION_ERROR:        'Some of the details look off. Please review your inputs and try again.',
+  RATE_LIMITED:            'Too many attempts. Please wait a minute before trying again.',
+}
+
+// Which step owns the field in the error so we can rewind for the user.
+const FIELD_TO_STEP = {
+  email:           0,
+  password:        0,
+  name:            0,
+  age:             1,
+  gender:          1,
+  heightCm:        1,
+  currentWeightKg: 1,
+  targetWeightKg:  1,
+  activityLevel:   1,
+  goal:            2,
+  diet:            3,
+}
+
 export default function SignupPage() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
+  // Inline error banner shown above the step's content. Cleared when the user
+  // navigates to a different step or edits a field.
+  const [errorMsg, setErrorMsg] = useState(null)
   const [form, setForm] = useState({
     name: '', email: '', password: '',
     age:             DEFAULTS.age,
@@ -39,6 +67,7 @@ export default function SignupPage() {
   const previewTarget = useMemo(() => getGoalCalories(previewTDEE, form.goal), [previewTDEE, form.goal])
 
   const handleNext = () => {
+    setErrorMsg(null)
     if (step < steps.length - 1) setStep(s => s + 1)
     else {
       setLoading(true)
@@ -46,7 +75,13 @@ export default function SignupPage() {
     }
   }
 
+  const handleBack = () => {
+    setErrorMsg(null)
+    setStep(s => s - 1)
+  }
+
   async function handleSignup() {
+    setErrorMsg(null)
     try {
       const payload = {
         name: form.name,
@@ -78,9 +113,18 @@ export default function SignupPage() {
         // Store user data in Redux so all components can access it reactively
         dispatch(setCredentials({ user: response.data.user, token: response.data.accessToken }))
         navigate('/dashboard')
+        return
       }
+      // Backend returned an error envelope. Resolve a friendly message and
+      // rewind to the step that owns the offending field so the user can edit.
+      const code  = response.error?.code
+      const field = response.error?.field
+      const msg   = SIGNUP_ERROR_MESSAGES[code] || response.error?.message || 'Couldn\'t create your account. Please try again.'
+      setErrorMsg(msg)
+      const targetStep = FIELD_TO_STEP[field]
+      if (typeof targetStep === 'number') setStep(targetStep)
     } catch {
-      /* error is surfaced by fetchAPI's toast */
+      setErrorMsg('Network error — please check your connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -147,6 +191,28 @@ export default function SignupPage() {
             </h1>
           </div>
 
+          {/* Inline error banner — shown when the backend rejects signup. The
+              handler rewinds to the step that owns the offending field so the
+              user can fix it without losing the rest of their progress. */}
+          {errorMsg && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="flex items-start gap-3 px-4 py-3 rounded-2xl bg-error/10 border border-error/30 text-error mb-6"
+            >
+              <span className="material-symbols-outlined text-base mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
+              <p className="text-sm font-body leading-snug flex-1">{errorMsg}</p>
+              <button
+                type="button"
+                onClick={() => setErrorMsg(null)}
+                aria-label="Dismiss error"
+                className="opacity-60 hover:opacity-100 transition-opacity"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+          )}
+
           {/* Step 0 — Account info */}
           {step === 0 && (
             <div className="space-y-5">
@@ -163,9 +229,11 @@ export default function SignupPage() {
                       type={type}
                       required
                       value={form[field]}
-                      onChange={e => setForm(p => ({ ...p, [field]: e.target.value }))}
+                      onChange={e => { setErrorMsg(null); setForm(p => ({ ...p, [field]: e.target.value })) }}
                       placeholder={placeholder}
-                      className="w-full pl-11 pr-4 py-4 bg-surface-container-high rounded-full border border-transparent focus:outline-none focus:border-primary/30 focus:bg-surface-container-lowest focus:shadow-ambient transition-all text-on-surface placeholder:text-outline/50 font-body"
+                      className={`w-full pl-11 pr-4 py-4 bg-surface-container-high rounded-full border focus:outline-none focus:bg-surface-container-lowest focus:shadow-ambient transition-all text-on-surface placeholder:text-outline/50 font-body ${
+                        errorMsg ? 'border-error/40 focus:border-error/60' : 'border-transparent focus:border-primary/30'
+                      }`}
                     />
                   </div>
                 </div>
@@ -341,7 +409,7 @@ export default function SignupPage() {
           {/* Navigation buttons */}
           <div className="flex gap-3 mt-8">
             {step > 0 && (
-              <Button variant="secondary" onClick={() => setStep(s => s - 1)} className="flex-1 py-4">
+              <Button variant="secondary" onClick={handleBack} className="flex-1 py-4">
                 <span className="material-symbols-outlined text-sm">arrow_back</span>
                 Back
               </Button>

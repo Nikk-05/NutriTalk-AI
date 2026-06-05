@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { DietPlan } from '../models/DietPlan.model.js';
-import { MealLog } from '../models/MealLog.model.js';
+import { seedTodayFromPlan } from '../services/dietPlan.service.js';
 import { success, created, notFound, serverError } from '../utils/response.utils.js';
 
 const AI_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
@@ -112,42 +112,23 @@ const seedToday = async (req, res, next) => {
     const plan = await DietPlan.findOne({ _id: req.params.id, user: req.user._id });
     if (!plan) return notFound(res, 'Plan not found.');
 
-    const today   = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-    const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }); // "Monday"
-
-    // Match today's day name against the plan's days array
-    const dayData = plan.days.find(d => d.day?.toLowerCase() === dayName.toLowerCase());
-    if (!dayData) return success(res, { message: `No meals planned for ${dayName}.`, seeded: 0 });
-
-    // Remove any previously planned (unlogged) meals for today so the new active
-    // plan replaces them cleanly. Meals the user already marked as eaten are kept.
-    await MealLog.deleteMany({ user: req.user._id, date: today, logged: false });
-
-    // Mark this plan as the active one (deactivate others)
+    // Mark this plan as the active one (deactivate others) so subsequent
+    // dashboard requests pick it up via autoSeedTodayIfEmpty.
     await DietPlan.updateMany({ user: req.user._id, isActive: true }, { isActive: false });
     plan.isActive = true;
     await plan.save();
 
-    const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
-    let seeded = 0;
-
-    for (const type of mealTypes) {
-      const meal = dayData.meals?.[type];
-      if (!meal?.name) continue;
-
-      await MealLog.create({
-        user:     req.user._id,
-        date:     today,
-        type,
-        name:     meal.name,
-        calories: meal.calories || 0,
-        logged:   false, // planned, not yet eaten — user marks true when they eat it
-        macros:   { proteinG: meal.microNutrients?.protein || 0, carbsG: meal.microNutrients?.carbs || 0, fatG: meal.microNutrients?.fats || 0, fiberG: meal.microNutrients?.fiber || 0 },
-      });
-      seeded++;
+    // Delegate the actual MealLog materialization to the shared helper so the
+    // dashboard auto-seed and this manual endpoint stay in lock-step.
+    const result = await seedTodayFromPlan(req.user._id, plan);
+    if (result.reason === 'no_day_in_plan') {
+      return success(res, { message: `No meals planned for ${result.day}.`, seeded: 0 });
     }
-
-    return success(res, { message: `Seeded ${seeded} meal(s) for today (${dayName}).`, seeded, day: dayName });
+    return success(res, {
+      message: `Seeded ${result.seeded} meal(s) for today (${result.day}).`,
+      seeded:  result.seeded,
+      day:     result.day,
+    });
   } catch (err) { next(err); }
 };
 

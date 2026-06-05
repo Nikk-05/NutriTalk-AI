@@ -60,6 +60,22 @@ export const fetchWeightHistory = createAsyncThunk(
   }
 )
 
+// Log today's weight. Calls POST /dashboard/weight { kg } and re-fetches
+// the chart history so the new bar appears immediately.
+export const logWeight = createAsyncThunk(
+  'dashboard/logWeight',
+  async (kg, { dispatch, getState, rejectWithValue }) => {
+    const res = await fetchAPI('/dashboard/weight', 'POST', { kg })
+    if (res.status !== 'success') {
+      return rejectWithValue(res.error?.message || 'Failed to log weight')
+    }
+    // Refresh the chart for the currently selected period.
+    const period = getState().dashboard.period
+    dispatch(fetchWeightHistory(period))
+    return res.data
+  }
+)
+
 const initialState = {
   summary: null,          // full summary object from GET /dashboard/summary
   weightHistory: [],      // array of { date, kg } entries
