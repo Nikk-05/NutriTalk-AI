@@ -1,22 +1,41 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { auth, fetchAPI } from '../utils/apiCalls.js'
 import { clearCredentials, selectIsLoggedIn, selectUser } from '../store/slices/authSlice'
 import { clearDashboard } from '../store/slices/dashboardSlice'
 import { clearDietPlan } from '../store/slices/dietPlanSlice'
-import { NAV_LINKS } from '../constants/appConstants'
+import { APP_NAV_LINKS, MARKETING_NAV_LINKS } from '../constants/appConstants'
+
+// Smooth-scrolls to a hash anchor on the current page. If we're not on the
+// landing page yet, navigate there first and the hash effect below handles
+// the scroll once the page mounts.
+function scrollToHash(hash) {
+  const id = hash.replace(/^#/, '')
+  const el = id ? document.getElementById(id) : null
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  else window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef(null)
   const navigate = useNavigate()
+  const location = useLocation()
   const dispatch = useDispatch()
 
   // Read auth state from Redux — updates automatically when login/logout actions are dispatched
   const loggedIn = useSelector(selectIsLoggedIn)
   const user = useSelector(selectUser)
+
+  // Nav links are chosen by route, not just auth. Visitors and signed-in users
+  // both get the marketing nav while *on* the landing page so all sections
+  // (Features, How it Works, Pricing, FAQ) stay reachable post-login. On any
+  // app route, signed-in users get the app nav (Dashboard / Chat / Diet Plan).
+  const onLanding = location.pathname === '/' || location.pathname === ''
+  const showMarketingNav = !loggedIn || onLanding
+  const navLinks = showMarketingNav ? MARKETING_NAV_LINKS : APP_NAV_LINKS
 
   // Close profile dropdown on outside click.
   useEffect(() => {
@@ -26,6 +45,35 @@ export default function Navbar() {
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
+
+  // When the URL contains a hash (e.g. /#features) scroll to that section
+  // once the page mounts. Handles deep-links into landing sections.
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace(/^#/, '')
+      // Defer until after the route's content has painted.
+      requestAnimationFrame(() => {
+        const el = document.getElementById(id)
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
+  }, [location.pathname, location.hash])
+
+  // Handles marketing nav clicks: if already on the landing page just scroll,
+  // otherwise navigate to "/" with the hash so the effect above does the work.
+  const handleMarketingNav = (to) => (e) => {
+    const hash = to.split('#')[1]
+    const isLanding = location.pathname === '/' || location.pathname === ''
+    if (isLanding && hash) {
+      e.preventDefault()
+      scrollToHash('#' + hash)
+      // Update the URL without triggering a navigation reload.
+      window.history.replaceState(null, '', '/#' + hash)
+    } else if (!isLanding && hash) {
+      e.preventDefault()
+      navigate('/#' + hash)
+    }
+  }
 
   const handleLogout = async () => {
     try { await fetchAPI('/auth/logout', 'POST', {}) } catch { /* ignore */ }
@@ -45,21 +93,23 @@ export default function Navbar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       <nav className="glass-nav max-w-7xl mx-auto flex items-center justify-between px-6 py-4 shadow-ambient-sm">
-        {/* Logo — points at the user's "home". For visitors that's the marketing
-            landing page; for signed-in users it's their dashboard. */}
-        <Link to={loggedIn ? '/dashboard' : '/'} className="text-2xl font-black font-headline tracking-tight text-primary">
+        {/* Logo — always points at the marketing landing page so signed-in
+            users can browse Features/Pricing/FAQ. The right-side actions give
+            them a clear path back to the dashboard. */}
+        <Link to="/" className="text-2xl font-black font-headline tracking-tight text-primary">
           NutriTalk AI
         </Link>
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-8">
-          {NAV_LINKS.map(({ to, label }) => (
+          {navLinks.map(({ to, label }) => (
             <NavLink
               key={to}
               to={to}
+              onClick={showMarketingNav ? handleMarketingNav(to) : undefined}
               className={({ isActive }) =>
                 `font-headline font-bold transition-colors ${
-                  isActive
+                  isActive && !showMarketingNav
                     ? 'text-primary border-b-2 border-primary pb-0.5'
                     : 'text-on-surface-variant hover:text-primary'
                 }`
@@ -74,6 +124,18 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {loggedIn ? (
             <>
+              {/* Quick "back to app" pill — only on the landing page so signed-in
+                  users browsing marketing can jump straight to their dashboard. */}
+              {onLanding && (
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="hidden lg:flex items-center gap-2 primary-gradient text-on-primary px-5 py-2 rounded-full font-headline font-bold text-sm shadow-primary-sm hover:-translate-y-0.5 active:scale-95 transition-all"
+                >
+                  <span className="material-symbols-outlined text-base">dashboard</span>
+                  Dashboard
+                </button>
+              )}
+
               <button className="p-2 hover:bg-surface-container rounded-full transition-all duration-200 active:scale-95">
                 <span className="material-symbols-outlined text-on-surface-variant">notifications</span>
               </button>
@@ -154,14 +216,17 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden glass-nav border-t border-outline-variant/20 px-6 pb-6 pt-2 max-w-7xl mx-auto">
           <div className="flex flex-col gap-4">
-            {NAV_LINKS.map(({ to, label }) => (
+            {navLinks.map(({ to, label }) => (
               <NavLink
                 key={to}
                 to={to}
-                onClick={() => setMenuOpen(false)}
+                onClick={(e) => {
+                  if (showMarketingNav) handleMarketingNav(to)(e)
+                  setMenuOpen(false)
+                }}
                 className={({ isActive }) =>
                   `font-headline font-bold py-2 transition-colors ${
-                    isActive ? 'text-primary' : 'text-on-surface-variant'
+                    isActive && !showMarketingNav ? 'text-primary' : 'text-on-surface-variant'
                   }`
                 }
               >

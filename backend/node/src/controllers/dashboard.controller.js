@@ -1,5 +1,7 @@
 import { MealLog } from '../models/MealLog.model.js';
 import { DietPlan, WeightHistory } from '../models/DietPlan.model.js';
+import { User } from '../models/User.model.js';
+import { autoSeedTodayIfEmpty } from '../services/dietPlan.service.js';
 import { success } from '../utils/response.utils.js';
 
 // ── GET /dashboard/summary ─────────────────────────────────
@@ -8,6 +10,12 @@ const getSummary = async (req, res, next) => {
     const userId = req.user._id;
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const user = req.user;
+
+    // Auto-seed today's planned meals from the active diet plan if the user
+    // hasn't logged anything yet. Idempotent — only seeds when MealLog is
+    // empty for today AND an active+saved plan exists. Means the dashboard
+    // naturally shows today's meals after login without "Sync Today" clicks.
+    await autoSeedTodayIfEmpty(userId);
 
     // Meals logged today (all — planned and eaten)
     const meals = await MealLog.find({ user: userId, date: today });
@@ -103,7 +111,7 @@ const logWeight = async (req, res, next) => {
     await wh.save();
 
     // Update current weight on user
-    await require('../models/User.model').findByIdAndUpdate(req.user._id, { 'metrics.currentWeightKg': kg });
+    await User.findByIdAndUpdate(req.user._id, { 'metrics.currentWeightKg': kg });
     return success(res, { date, kg });
   } catch (err) { next(err); }
 };

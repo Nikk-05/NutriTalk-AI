@@ -1,4 +1,5 @@
 import {Notification} from '../models/Notification.model.js';
+import { User } from '../models/User.model.js';
 import { success } from '../utils/response.utils.js';
 
 // ── GET /notifications ─────────────────────────────────────
@@ -34,7 +35,7 @@ const getPreferences = (req, res) => success(res, { preferences: req.user.notifi
 // ── PUT /notifications/preferences ────────────────────────
 const updatePreferences = async (req, res, next) => {
   try {
-    const user = await require('../models/User.model').findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
       req.user._id,
       { $set: { notifications: req.body } },
       { new: true }

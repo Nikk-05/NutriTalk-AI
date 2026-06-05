@@ -1,4 +1,8 @@
 const errorHandler = (err, req, res, next) => {
+  // Headers already flushed (e.g. SSE streams) — can't send a JSON error body.
+  // Delegate to Express's default handler which will just close the socket.
+  if (res.headersSent) return next(err);
+
   // Mongoose validation error
   if (err.name === 'ValidationError') {
     const field = Object.keys(err.errors)[0];

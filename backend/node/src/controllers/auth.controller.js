@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import {User} from '../models/User.model.js';
 import { WeightHistory } from '../models/DietPlan.model.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.utils.js';
-import { success, created, error, serverError } from '../utils/response.utils.js';
+import { success, created, error } from '../utils/response.utils.js';
 
 // Today's date in the YYYY-MM-DD format the WeightHistory schema expects.
 const todayStr = () => new Date().toISOString().slice(0, 10);
