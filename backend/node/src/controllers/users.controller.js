@@ -1,6 +1,7 @@
 import {User} from '../models/User.model.js';
 import { WeightHistory } from '../models/DietPlan.model.js';
 import { success, error } from '../utils/response.utils.js';
+import { computeCalorieTarget } from '../utils/tdee.utils.js';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -26,9 +27,24 @@ const getProfile = (req, res) => success(res, { user: req.user });
 // ── PUT /users/me ──────────────────────────────────────────
 const updateProfile = async (req, res, next) => {
   try {
-    const allowed = ['name', 'metrics', 'notifications'];
+    const allowed = ['name', 'age', 'gender', 'metrics', 'notifications'];
     const updates = {};
     allowed.forEach(field => { if (req.body[field] !== undefined) updates[field] = req.body[field]; });
+
+    // Recompute TDEE if anything that feeds into it has changed.
+    // Merge incoming values with current user record so we always have a full set.
+    const tdeeInputsChanged =
+      updates.age !== undefined || updates.gender !== undefined || updates.metrics !== undefined;
+
+    if (tdeeInputsChanged) {
+      const age     = updates.age     ?? req.user.age;
+      const gender  = updates.gender  ?? req.user.gender;
+      const metrics = { ...req.user.metrics?.toObject?.() ?? req.user.metrics, ...(updates.metrics || {}) };
+      const goal    = req.user.preferences?.primaryGoal;
+      const computed = computeCalorieTarget(metrics, age, gender, goal);
+      if (computed) updates['preferences.dailyCalorieTarget'] = computed;
+    }
+
     const user = await User.findByIdAndUpdate(req.user._id, { $set: updates }, { new: true, runValidators: true });
 
     // Mirror current weight into WeightHistory whenever the user changes it.
@@ -50,6 +66,13 @@ const updatePreferences = async (req, res, next) => {
     if (dailyCalorieTarget !== undefined) prefs['preferences.dailyCalorieTarget'] = dailyCalorieTarget;
     if (cuisinePreferences !== undefined) prefs['preferences.cuisinePreferences'] = cuisinePreferences;
     if (allergies !== undefined)          prefs['preferences.allergies'] = allergies;
+
+    // Recompute TDEE when goal changes — adjustment delta depends on it.
+    // Skip if client explicitly sent a dailyCalorieTarget (manual override wins).
+    if (primaryGoal !== undefined && dailyCalorieTarget === undefined) {
+      const computed = computeCalorieTarget(req.user.metrics, req.user.age, req.user.gender, primaryGoal);
+      if (computed) prefs['preferences.dailyCalorieTarget'] = computed;
+    }
 
     const user = await User.findByIdAndUpdate(req.user._id, { $set: prefs }, { new: true });
     return success(res, { user });
