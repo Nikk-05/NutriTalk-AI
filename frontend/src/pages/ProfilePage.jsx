@@ -1,10 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Button from '../components/Button'
 import GlassCard from '../components/GlassCard'
 import Stepper from '../components/Stepper'
 import { auth, fetchAPI } from '../utils/apiCalls.js'
 import { GOALS, DIETS, GENDERS, ACTIVITY_LEVELS, DEFAULTS, RANGES } from '../constants/appConstants'
+import { calculateTDEE, getGoalCalories } from '../utils/tdee'
+
+// Pulls the shape ProfilePage's `form` expects out of a server user object.
+// Used by both loadProfile() and handleSave() so the local form stays in sync
+// with whatever the server says — no stale values after a save.
+function userToForm(u) {
+  return {
+    name:  u.name  || '',
+    email: u.email || '',
+    age:   u.age  ?? '',
+    gender: u.gender || 'prefer_not_to_say',
+    heightCm:           u.metrics?.heightCm          ?? DEFAULTS.heightCm,
+    currentWeightKg:    u.metrics?.currentWeightKg   ?? DEFAULTS.currentWeightKg,
+    targetWeightKg:     u.metrics?.targetWeightKg    ?? DEFAULTS.targetWeightKg,
+    activityLevel:      u.metrics?.activityLevel     || DEFAULTS.activityLevel,
+    primaryGoal:        u.preferences?.primaryGoal   || 'Maintenance',
+    dailyCalorieTarget: u.preferences?.dailyCalorieTarget ?? DEFAULTS.dailyCalorieTarget,
+    dietaryRestriction: u.preferences?.dietaryRestriction || DEFAULTS.dietaryRestriction,
+  }
+}
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -37,19 +57,7 @@ export default function ProfilePage() {
       if (res?.status === 'success') {
         const u = res.data.user
         auth.setUser(u)
-        setForm({
-          name: u.name || '',
-          email: u.email || '',
-          age: u.age ?? '',
-          gender: u.gender || 'prefer_not_to_say',
-          heightCm:           u.metrics?.heightCm          ?? DEFAULTS.heightCm,
-          currentWeightKg:    u.metrics?.currentWeightKg   ?? DEFAULTS.currentWeightKg,
-          targetWeightKg:     u.metrics?.targetWeightKg    ?? DEFAULTS.targetWeightKg,
-          activityLevel:      u.metrics?.activityLevel     || DEFAULTS.activityLevel,
-          primaryGoal:        u.preferences?.primaryGoal   || 'Maintenance',
-          dailyCalorieTarget: u.preferences?.dailyCalorieTarget ?? DEFAULTS.dailyCalorieTarget,
-          dietaryRestriction: u.preferences?.dietaryRestriction || DEFAULTS.dietaryRestriction,
-        })
+        setForm(userToForm(u))
       }
     } finally {
       setLoading(false)
@@ -81,8 +89,17 @@ export default function ProfilePage() {
         fetchAPI('/users/preferences', 'PUT', prefsPayload),
       ])
 
-      if (profileRes?.status === 'success') auth.setUser(profileRes.data.user)
-      if (prefsRes?.status === 'success') auth.setUser(prefsRes.data.user)
+      // Both calls write to the same User document. The second response is
+      // the authoritative latest snapshot — sync local form + session from it
+      // so the recomputed dailyCalorieTarget shows up immediately without a
+      // page reload. Fall back to whichever response succeeded.
+      const latest = prefsRes?.status === 'success' ? prefsRes.data.user
+                   : profileRes?.status === 'success' ? profileRes.data.user
+                   : null
+      if (latest) {
+        auth.setUser(latest)
+        setForm(userToForm(latest))
+      }
 
       setSavedFlash('Profile updated successfully.')
       setTimeout(() => setSavedFlash(''), 3000)
@@ -221,15 +238,11 @@ export default function ProfilePage() {
               </select>
             </Field>
           </div>
-          <div className="mt-5 p-4 rounded-2xl bg-primary/5 border border-primary/15 flex items-center justify-between">
-            <div>
-              <p className="font-label text-xs font-bold uppercase tracking-widest text-outline">Daily Calorie Target</p>
-              <p className="text-[11px] text-on-surface-variant mt-0.5">Calculated from your metrics + goal (Mifflin-St Jeor)</p>
-            </div>
-            <p className="text-xl font-black text-primary font-headline">
-              {form.dailyCalorieTarget?.toLocaleString?.() ?? form.dailyCalorieTarget} kcal
-            </p>
-          </div>
+          {/* TDEE breakdown — shows BMR (Maintenance) → activity → goal adjustment
+              → final target so the user understands where the number comes from.
+              Reads live from `form` state (re-keyed after handleSave merges the
+              server response) so the value updates immediately on save. */}
+          <TdeeBreakdownCard form={form} />
         </GlassCard>
 
         {/* Actions */}
@@ -263,6 +276,112 @@ function Field({ label, children }) {
     <div>
       <label className="font-label text-xs font-bold uppercase tracking-widest text-outline mb-2 block">{label}</label>
       {children}
+    </div>
+  )
+}
+
+// TDEE breakdown — same visual pattern used on SignupPage step 2. Lives here
+// instead of being shared because the wider style differs slightly (sits inside
+// a GlassCard) and the inputs come straight from the form rather than a
+// previewTDEE memo. If we ever need a third location, lift this to a shared
+// component.
+function TdeeBreakdownCard({ form }) {
+  const tdee = useMemo(() => calculateTDEE({
+    age:    form.age,
+    gender: form.gender,
+    metrics: {
+      heightCm:        form.heightCm,
+      currentWeightKg: form.currentWeightKg,
+      activityLevel:   form.activityLevel,
+    },
+  }), [form.age, form.gender, form.heightCm, form.currentWeightKg, form.activityLevel])
+
+  const recommendedTarget = useMemo(() => getGoalCalories(tdee, form.primaryGoal), [tdee, form.primaryGoal])
+
+  // What's currently stored on the user (recomputed server-side on save).
+  const storedTarget = Number(form.dailyCalorieTarget) || null
+
+  // If the profile is incomplete, show a hint instead of empty math.
+  if (!tdee) {
+    return (
+      <div className="mt-5 flex items-center gap-3 p-4 rounded-2xl bg-surface-container-high">
+        <span className="material-symbols-outlined text-outline" style={{ fontSize: '18px' }}>info</span>
+        <p className="text-xs text-outline">
+          Fill in your age, height, and current weight to see your daily calorie target breakdown.
+        </p>
+      </div>
+    )
+  }
+
+  const adjustment = (recommendedTarget ?? 0) - tdee
+  const isDeficit  = adjustment < 0
+  const isSurplus  = adjustment > 0
+
+  return (
+    <div className="mt-5 rounded-2xl border-2 border-primary/20 bg-primary/5 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <span
+          className="material-symbols-outlined text-primary"
+          style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}
+        >
+          calculate
+        </span>
+        <span className="text-xs font-black uppercase tracking-widest text-primary">
+          Your daily calorie target
+        </span>
+      </div>
+
+      <div className="space-y-2 mb-4">
+        {/* Row 1 — Maintenance (BMR × activity multiplier) */}
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2 text-on-surface-variant">
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: '15px', fontVariationSettings: "'FILL' 1" }}
+            >
+              local_fire_department
+            </span>
+            <span className="font-medium">Maintenance (TDEE)</span>
+          </div>
+          <span className="font-bold text-on-surface">{tdee.toLocaleString()} kcal</span>
+        </div>
+
+        {/* Row 2 — Goal adjustment (only when non-zero) */}
+        {(isDeficit || isSurplus) && (
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-on-surface-variant">
+              <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
+                {isDeficit ? 'remove' : 'add'}
+              </span>
+              <span className="font-medium">Goal adjustment ({form.primaryGoal})</span>
+            </div>
+            <span className={`font-bold ${isDeficit ? 'text-error' : 'text-primary'}`}>
+              {isDeficit ? '−' : '+'}{Math.abs(adjustment).toLocaleString()} kcal
+            </span>
+          </div>
+        )}
+
+        {/* Row 3 — Recommended target */}
+        <div className="border-t border-primary/15 pt-2 flex items-center justify-between">
+          <span className="text-sm font-black text-on-surface">Recommended target</span>
+          <span className="text-xl font-black text-primary font-headline">
+            {recommendedTarget?.toLocaleString()} kcal
+          </span>
+        </div>
+
+        {/* Row 4 — Currently stored target (if different from the recommended) */}
+        {storedTarget && storedTarget !== recommendedTarget && (
+          <div className="flex items-center justify-between text-xs text-outline pt-1">
+            <span>Current stored target</span>
+            <span className="font-bold">{storedTarget.toLocaleString()} kcal</span>
+          </div>
+        )}
+      </div>
+
+      <p className="text-[11px] text-outline leading-relaxed">
+        Calculated using the Mifflin-St Jeor formula × your activity multiplier, then adjusted for your goal.
+        Save changes to lock in the new target — it&apos;ll update across the dashboard and diet planner.
+      </p>
     </div>
   )
 }

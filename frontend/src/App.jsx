@@ -1,8 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AppLayout from './layouts/AppLayout'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import NotFoundPage from './pages/NotFoundPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import { lazy, Suspense } from 'react'
 
@@ -21,6 +24,8 @@ export default function App() {
           {/* Auth pages — standalone, no shared layout */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* App pages — wrapped in shared layout. Landing is public; the
               rest require a logged-in session and redirect to /login if not. */}
@@ -33,8 +38,10 @@ export default function App() {
             <Route path="/profile"   element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* 404 fallback — rendered inside AppLayout so it keeps the navbar */}
+          <Route element={<AppLayout />}>
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
         </Routes>
       </Suspense>
     </BrowserRouter>

@@ -64,7 +64,7 @@ export default function FeaturesBento({ planPath, exploreScrollTarget = '#how-it
             </div>
             <div className="w-full md:w-64 aspect-video rounded-2xl overflow-hidden flex-shrink-0">
               <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1Au8Y0gNURmKi-WbdTKjzR5GCmdj6WsOw5iYUgal8ca9SzTfWVsFgIIDFm4pPOUC8OuYkGzsrCHTR-lrzmwAjx0a-a_lQ4FTznPX6M8TEDMl4ZNMYRO0YoDQnASkF4TLFkrsi-B0xkcd1xAUHAjuFXZvW51hlBu3CaGSLHHspEJgGxlpSPpM14yLzhLY-6K-AN2z1GZGOOQmutO1RpY1cYa6Hf_dNzK0bkISfXPKRXq3qqLsvpt3wgF14H5-o4"
+                src="https://images.unsplash.com/photo-1668665771757-4d42737d295a?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                 alt="Meal prep"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
               />

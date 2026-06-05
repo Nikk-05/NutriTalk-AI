@@ -81,9 +81,9 @@ export default function HeroSection({ loggedIn, primaryPath, secondaryPath, prim
                 "Based on your 5k run, I recommend a high-protein breakfast with complex carbs..."
               </p>
             </GlassCard>
-            <GlassCard className="absolute bottom-10 -right-6 z-20 p-6 w-52">
+            <GlassCard className="absolute bottom-7 -right-6 z-20 p-6 w-52">
               <p className="font-label text-[10px] font-bold uppercase tracking-widest text-primary mb-3">Daily Progress</p>
-              <div className="flex justify-between items-end gap-1.5 h-10">
+              <div className="flex justify-between items-end gap-1.5 h-15">
                 {[48, 64, 96, 56, 80].map((h, i) => (
                   <div
                     key={i}

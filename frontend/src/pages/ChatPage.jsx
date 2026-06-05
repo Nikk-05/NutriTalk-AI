@@ -29,6 +29,9 @@ export default function ChatPage() {
   const [streaming,    setStreaming]    = useState(false)
   const [loadingChats, setLoadingChats] = useState(false)
   const [loadingMsgs,  setLoadingMsgs]  = useState(false)
+  // Mobile/tablet only — the desktop sidebar is replaced by a slide-up
+  // bottom-sheet drawer triggered from the chat header.
+  const [historyOpen,  setHistoryOpen]  = useState(false)
 
   const bottomRef  = useRef(null)
   const inputRef   = useRef(null)
@@ -290,6 +293,15 @@ export default function ChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {/* Mobile/tablet: open past-chat history drawer (replaces sidebar) */}
+            <button
+              onClick={() => setHistoryOpen(true)}
+              className="lg:hidden p-2 text-outline hover:text-primary transition-colors rounded-full hover:bg-surface-container"
+              title="Past chats"
+              aria-label="Open past chats"
+            >
+              <span className="material-symbols-outlined">history</span>
+            </button>
             {/* Mobile: new chat */}
             <button
               onClick={handleNewChat}
@@ -385,25 +397,39 @@ export default function ChatPage() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input bar */}
+        {/* Input bar — auto-growing textarea wraps long messages instead of
+            scrolling horizontally. Enter sends; Shift+Enter inserts a newline. */}
         <div className="p-4 md:p-6 bg-white/40 backdrop-blur-sm border-t border-surface-container-low">
-          <div className="max-w-4xl mx-auto flex items-center gap-3 bg-surface-container-high rounded-full px-5 py-2 border border-transparent focus-within:border-primary/20 focus-within:bg-surface-container-lowest focus-within:shadow-ambient transition-all">
-            <button className="text-outline hover:text-primary transition-colors">
+          <div className="max-w-4xl mx-auto flex items-end gap-3 bg-surface-container-high rounded-3xl px-5 py-2 border border-transparent focus-within:border-primary/20 focus-within:bg-surface-container-lowest focus-within:shadow-ambient transition-all">
+            <button className="text-outline hover:text-primary transition-colors flex-shrink-0 py-2.5" aria-label="Attach">
               <span className="material-symbols-outlined">add_circle</span>
             </button>
-            <input
+            <textarea
               ref={inputRef}
+              rows={1}
               value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+              onChange={e => {
+                setInput(e.target.value)
+                // Auto-grow: reset to single-row, then expand to scrollHeight up
+                // to a ~5-row cap (140 px). Beyond that the textarea scrolls.
+                e.target.style.height = 'auto'
+                e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px'
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  sendMessage()
+                }
+              }}
               disabled={streaming}
-              className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 py-3 text-sm text-on-surface placeholder:text-outline/60 disabled:opacity-50"
+              className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 py-3 text-sm text-on-surface placeholder:text-outline/60 disabled:opacity-50 resize-none leading-relaxed max-h-[140px] overflow-y-auto"
               placeholder={streaming ? 'NutriTalk is thinking...' : 'Ask about diet, calories, or fitness...'}
             />
             <button
               onClick={() => sendMessage()}
               disabled={!input.trim() || streaming}
-              className="primary-gradient text-on-primary w-10 h-10 rounded-full flex items-center justify-center shadow-primary-sm active:scale-95 transition-transform flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="primary-gradient text-on-primary w-10 h-10 rounded-full flex items-center justify-center shadow-primary-sm active:scale-95 transition-transform flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed self-end mb-1"
+              aria-label="Send"
             >
               <span className="material-symbols-outlined text-sm">send</span>
             </button>
@@ -413,6 +439,75 @@ export default function ChatPage() {
           </p>
         </div>
       </section>
+
+      {/* ── Mobile/tablet past-chats drawer (slide-up bottom sheet) ──
+          Replaces the desktop sidebar on screens below lg. Triggered from the
+          history button in the chat header. Closes on backdrop click, on the
+          handle button, or after selecting a chat. */}
+      {historyOpen && (
+        <div className="lg:hidden fixed inset-0 z-[60] flex flex-col justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-scrim/60 backdrop-blur-sm"
+            onClick={() => setHistoryOpen(false)}
+            aria-hidden="true"
+          />
+          {/* Sheet */}
+          <div className="relative bg-surface-container-lowest rounded-t-3xl shadow-ambient max-h-[80vh] flex flex-col animate-[slideUp_0.25s_ease-out]">
+            {/* Drag handle + header */}
+            <div className="flex flex-col items-center pt-3 pb-2 border-b border-outline-variant/20">
+              <button
+                onClick={() => setHistoryOpen(false)}
+                aria-label="Close past chats"
+                className="w-12 h-1.5 rounded-full bg-outline-variant/60 mb-3"
+              />
+              <div className="w-full px-6 flex items-center justify-between">
+                <h2 className="font-headline text-xl font-bold">Recent Chats</h2>
+                <button
+                  onClick={() => { handleNewChat(); setHistoryOpen(false) }}
+                  disabled={streaming}
+                  className="text-primary hover:text-primary/80 disabled:opacity-40 transition-colors flex items-center gap-1 font-headline font-bold text-sm"
+                  title="New chat"
+                >
+                  <span className="material-symbols-outlined text-base">edit_square</span>
+                  New
+                </button>
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="overflow-y-auto px-4 py-3 space-y-1.5 flex-1">
+              {loadingChats ? (
+                <div className="space-y-2 animate-pulse">
+                  {[1, 2, 3].map(i => <div key={i} className="h-14 bg-surface-container rounded-xl" />)}
+                </div>
+              ) : chats.length > 0 ? (
+                chats.map(chat => (
+                  <button
+                    key={chat._id}
+                    onClick={() => { handleSelectChat(chat._id); setHistoryOpen(false) }}
+                    className={`w-full text-left p-3 rounded-xl transition-all ${
+                      activeChatId === chat._id
+                        ? 'bg-primary/10 text-primary'
+                        : 'hover:bg-surface-container-high text-on-surface'
+                    }`}
+                  >
+                    <p className="text-sm font-semibold truncate">{chat.title}</p>
+                    <p className="text-[10px] text-outline mt-0.5">
+                      {new Date(chat.lastMessageAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </button>
+                ))
+              ) : (
+                <div className="text-center py-12 text-outline">
+                  <span className="material-symbols-outlined text-4xl opacity-40 mb-2">forum</span>
+                  <p className="text-sm">No chats yet. Start a conversation!</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

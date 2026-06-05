@@ -18,8 +18,12 @@ function scrollToHash(hash) {
 }
 
 export default function Navbar() {
-  const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  // Auto-hide on mobile when the user scrolls down — reappears on scroll-up.
+  // Desktop ignores this state via the `md:translate-y-0` class on <header>.
+  // Toggle once user crosses a small dead-zone (~80 px) to avoid flicker.
+  const [hideOnScroll, setHideOnScroll] = useState(false)
+  const lastScrollY = useRef(0)
   const profileRef = useRef(null)
   const navigate = useNavigate()
   const location = useLocation()
@@ -44,6 +48,26 @@ export default function Navbar() {
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  // Auto-hide on scroll-down (mobile only — class gate on <header> ensures the
+  // desktop nav stays put). Always visible above 80 px so the top of the page
+  // never feels truncated. Small delta filters jitter from momentum scroll.
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY
+      const delta = y - lastScrollY.current
+      if (y < 80) {
+        setHideOnScroll(false)
+      } else if (delta > 8) {
+        setHideOnScroll(true)   // scrolled down → hide
+      } else if (delta < -8) {
+        setHideOnScroll(false)  // scrolled up → show
+      }
+      lastScrollY.current = y
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   // When the URL contains a hash (e.g. /#features) scroll to that section
@@ -84,14 +108,17 @@ export default function Navbar() {
     dispatch(clearDashboard())
     dispatch(clearDietPlan())
     setProfileOpen(false)
-    setMenuOpen(false)
     navigate('/login')
   }
 
   const initials = (user?.name || 'U').split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase()
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50">
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-out md:translate-y-0 ${
+        hideOnScroll ? '-translate-y-full' : 'translate-y-0'
+      }`}
+    >
       <nav className="glass-nav max-w-7xl mx-auto flex items-center justify-between px-6 py-4 shadow-ambient-sm">
         {/* Logo — always points at the marketing landing page so signed-in
             users can browse Features/Pricing/FAQ. The right-side actions give
@@ -199,68 +226,8 @@ export default function Navbar() {
             </>
           )}
 
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden p-2 hover:bg-surface-container rounded-full transition-all"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Toggle menu"
-          >
-            <span className="material-symbols-outlined text-on-surface">
-              {menuOpen ? 'close' : 'menu'}
-            </span>
-          </button>
         </div>
       </nav>
-
-      {/* Mobile Dropdown Menu */}
-      {menuOpen && (
-        <div className="md:hidden glass-nav border-t border-outline-variant/20 px-6 pb-6 pt-2 max-w-7xl mx-auto">
-          <div className="flex flex-col gap-4">
-            {navLinks.map(({ to, label }) => (
-              <NavLink
-                key={to}
-                to={to}
-                onClick={(e) => {
-                  if (showMarketingNav) handleMarketingNav(to)(e)
-                  setMenuOpen(false)
-                }}
-                className={({ isActive }) =>
-                  `font-headline font-bold py-2 transition-colors ${
-                    isActive && !showMarketingNav ? 'text-primary' : 'text-on-surface-variant'
-                  }`
-                }
-              >
-                {label}
-              </NavLink>
-            ))}
-            {loggedIn ? (
-              <>
-                <Link
-                  to="/profile"
-                  onClick={() => setMenuOpen(false)}
-                  className="font-headline font-bold py-2 text-on-surface-variant"
-                >
-                  Update Profile
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="font-headline font-bold py-2 text-error text-left"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <Link
-                to="/signup"
-                onClick={() => setMenuOpen(false)}
-                className="primary-gradient text-on-primary px-6 py-3 rounded-full font-headline font-bold text-center shadow-primary-sm"
-              >
-                Get Started
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
     </header>
   )
 }

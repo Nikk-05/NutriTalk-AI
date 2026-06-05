@@ -196,7 +196,7 @@ export const RANGES = {
   age:      { min: 13,   max: 100, step: 1   },
   height:   { min: 120,  max: 220, step: 0.5 },
   weight:   { min: 30,   max: 200, step: 0.1 },
-  calories: { min: 1200, max: 3200, step: 50 },
+  calories: { min: 1200, max: 5000, step: 50 },
 }
 
 // ── Dashboard ────────────────────────────────────────────────
